@@ -43,7 +43,7 @@ class RLController():
         #self.state_estimator = StateEstMLP2()
         #self.state_estimator.load('./checkpoints/state_estimation/state_estimator.txt')
         self.state_estimator = MLP2(123, 11, [256,128])
-        self.state_estimator.load_state_dict(np.load('./checkpoints/state_estimation/state_estimator.npy', allow_pickle=True).item())
+        self.state_estimator.load_state_dict(np.load('./tmp_checkpoints/state_estimation/state_estimator.npy', allow_pickle=True).item())
 
         # History Buffers
         self.num_history_stack = 6

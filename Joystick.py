@@ -1,7 +1,9 @@
 # coding: utf8
 
 import numpy as np
-import gamepadClient as gC
+import raisimGymTorch.scripts.gamepadClient as gC
+
+LAASGAMEPAD=False
 
 class Joystick:
     """Joystick-like controller that outputs the reference velocity in local frame
@@ -26,9 +28,9 @@ class Joystick:
         self.vY = 0.
         self.vYaw = 0.
         self.vZ = 0.
-        self.VxScale = 1.
+        self.VxScale = 1.5
         self.VyScale = 0.0
-        self.vYawScale = 0.8
+        self.vYawScale = 1.0
         self.vZScale = 0.3
     
         self.Vx_ref = 0.0
@@ -41,6 +43,8 @@ class Joystick:
         self.southButton = False
         self.westButton = False
         self.joystick_code = 0  # Code to carry information about pressed buttons
+
+        self.reset = False
 
     def update_v_ref(self, k_loop, velID, is_static=False):
         """Update the reference velocity of the robot along X, Y and Yaw in local frame by
@@ -64,23 +68,35 @@ class Joystick:
         """
 
         # Create the gamepad client
-        if k_loop == 0:
-            print("PASS")
-            self.gp = gC.GamepadClient()
+        if LAASGAMEPAD:
+            if k_loop == 0:
+                self.gp = gC.GamepadClient()
 
-            self.gp.leftJoystickX.value = 0.00390625
-            self.gp.leftJoystickY.value = 0.00390625
-            self.gp.rightJoystickY.value = 0.00390625
+                self.gp.leftJoystickX.value = 0.00390625
+                self.gp.leftJoystickY.value = 0.00390625
+                self.gp.rightJoystickX.value = 0.00390625
 
-        self.vX = (self.gp.leftJoystickX.value / 0.00390625 - 1 ) * self.VxScale
-        self.vY = (self.gp.leftJoystickY.value / 0.00390625 - 1 ) * self.VxScale
-        self.vYaw = (self.gp.rightJoystickY.value / 0.00390625 - 1 ) * self.vYawScale
+            self.vX = (self.gp.leftJoystickX.value / 0.00390625 - 1 ) * self.VxScale
+            self.vY = (self.gp.leftJoystickY.value / 0.00390625 - 1 ) * self.VxScale
+            self.vYaw = (self.gp.rightJoystickX.value / 0.00390625 - 1 ) * self.vYawScale
+
+        else:
+            if k_loop == 0:
+                self.gp = gC.GamepadClient()
+                self.gp.leftJoystickX.value = 0.
+                self.gp.leftJoystickY.value = 0.
+                self.gp.rightJoystickX.value = 0.
+
+            self.vX = self.gp.leftJoystickX.value * self.VxScale
+            self.vY = self.gp.leftJoystickY.value * self.VxScale
+            self.vYaw = self.gp.rightJoystickX.value * self.vYawScale
+
 
         self.v_gp = np.array([[- self.vY, - self.vX, 0.0, 0.0, 0.0, - self.vYaw]]).T
 
-        # Reduce the size of the support polygon by pressing Start
         if self.gp.startButton.value:
-            self.reduced = not self.reduced
+            #self.reduced = not self.reduced
+            self.reset = True
 
         # Switch to safety controller if the Back key is pressed
         if self.gp.backButton.value:
