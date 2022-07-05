@@ -119,7 +119,8 @@ def control_loop():
     #policy = RLController(device, weight_path='./checkpoints/vel_3d/flat/p2/jit_20000.pt', use_state_est= True)
     #policy = RLController(device, weight_path='./checkpoints/lpf/hf_terrain/full_2000.npy', use_state_est= True)
     #policy = RLController(device, weight_path='./checkpoints/vel_3d/hf_terrain/p2/full_5000.npy', use_state_est= True)
-    policy = RLController(weight_path='./tmp_checkpoints/policy-06-30-17-31-24/full_2000.npy', use_state_est= True)
+    #policy = RLController(weight_path='./tmp_checkpoints/policy-06-30-17-31-24/full_2000.npy', use_state_est= True)
+    policy = RLController(weight_path='./tmp_checkpoints/sym_pose/policy-07-01-12-42-53/full_2000.npy', use_state_est= True)
 
     # Define joystick
     joy = Joystick()
