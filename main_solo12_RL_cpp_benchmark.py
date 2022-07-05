@@ -5,6 +5,7 @@ import numpy as np
 from Params import RLParams
 from utils import *
 import time
+import pinocchio as pin
 
 #from cpuMLP import PolicyMLP3, StateEstMLP2
 from numpy_mlp import MLP2
@@ -16,13 +17,11 @@ np.set_printoptions(precision=3, linewidth=400)
 USE_JOYSTICK = True
 
 class RLController():
-    def __init__(self, device, weight_path, use_state_est=False):
+    def __init__(self, weight_path, use_state_est=False):
         """
         Args:
             params: store control parameters
         """
-        self.device = device
-
         # Control gains
         self.P =  np.array([3.0, 3.0, 3.0]*4) 
         self.D = np.array([0.2, 0.2, 0.2]*4)
@@ -66,11 +65,11 @@ class RLController():
         self.pTarget12[:] = params.q_init + 0.3 * self.policy.forward(self._obs).clip(-np.pi, np.pi)
         return self.pTarget12.copy()
 
-    def update_observation(self):
-        self.update_history() 
-        self.state_est_obs[:] =  np.hstack([self.device.rot_oMb[2,:],
-                                    self.device.joints.positions.flatten(),
-                                    self.device.joints.velocities.flatten(),
+    def update_observation(self, device):
+        self.update_history(device) 
+        self.state_est_obs[:] =  np.hstack([pin.Quaternion(device.imu.attitude_quaternion.reshape((-1,1))).toRotationMatrix()[2,:],
+                                    device.joints.positions.flatten(),
+                                    device.joints.velocities.flatten(),
                                     self.previous_action,
                                     self.preprevious_action,
                                     self.q_pos_error_hist[0],
@@ -80,12 +79,12 @@ class RLController():
                                     self.q_pos_error_hist[4],
                                     self.qd_hist[4]])
 
-        self._obs[:] = np.hstack([self.device.rot_oMb[2,:],
+        self._obs[:] = np.hstack([pin.Quaternion(device.imu.attitude_quaternion.reshape((-1,1))).toRotationMatrix()[2,:],
                                   self.state_estimator.forward(self.state_est_obs)[:3],
-                                  self.device.imu.gyroscope.flatten(),
+                                  device.imu.gyroscope.flatten(),
                                   self.vel_command,
-                                  self.device.joints.positions.flatten(),
-                                  self.device.joints.velocities.flatten(),
+                                  device.joints.positions.flatten(),
+                                  device.joints.velocities.flatten(),
                                   self.previous_action,
                                   self.preprevious_action,
                                   self.q_pos_error_hist[0],
@@ -95,14 +94,14 @@ class RLController():
                                   self.q_pos_error_hist[4],
                                   self.qd_hist[4]])
 
-    def update_history(self):
+    def update_history(self, device):
         tmp = self.q_pos_error_hist.copy()
         self.q_pos_error_hist[:-1,:] = tmp[1:,:]
-        self.q_pos_error_hist[-1,:] = self.pTarget12 - self.device.joints.positions
+        self.q_pos_error_hist[-1,:] = self.pTarget12 - device.joints.positions
 
         tmp = self.qd_hist.copy()
         self.qd_hist[:-1,:] = tmp[1:,:]
-        self.qd_hist[-1,:] = self.device.joints.velocities
+        self.qd_hist[-1,:] = device.joints.velocities
 
         self.preprevious_action[:] = self.previous_action.copy()
         self.previous_action[:] = self.pTarget12.copy()
@@ -116,6 +115,12 @@ def control_loop():
     the main control loop once the user has pressed the Enter key
     """
 
+    # Load RL policy
+    #policy = RLController(device, weight_path='./checkpoints/vel_3d/flat/p2/jit_20000.pt', use_state_est= True)
+    #policy = RLController(device, weight_path='./checkpoints/lpf/hf_terrain/full_2000.npy', use_state_est= True)
+    #policy = RLController(device, weight_path='./checkpoints/vel_3d/hf_terrain/p2/full_5000.npy', use_state_est= True)
+    policy = RLController(weight_path='./tmp_checkpoints/policy-06-30-17-31-24/full_2000.npy', use_state_est= True)
+
     # Define joystick
     joy = Joystick()
     joy.update_v_ref(0,0)
@@ -128,16 +133,10 @@ def control_loop():
     device, logger, qc = initialize(params, params.q_init, np.zeros((12,)), 100000)
 
 
-    # Load RL policy
-    #policy = RLController(device, weight_path='./checkpoints/vel_3d/flat/p2/jit_20000.pt', use_state_est= True)
-    #policy = RLController(device, weight_path='./checkpoints/lpf/hf_terrain/full_2000.npy', use_state_est= True)
-    #policy = RLController(device, weight_path='./checkpoints/vel_3d/hf_terrain/p2/full_5000.npy', use_state_est= True)
-    policy = RLController(device, weight_path='./tmp_checkpoints/policy-06-30-17-31-24/full_2000.npy', use_state_est= True)
-
     # Init Histories **********************************************
     device.parse_sensor_data()
     policy.pTarget12 = params.q_init.copy()
-    policy.update_observation()
+    policy.update_observation(device)
 
     device.joints.set_position_gains(policy.P)
     device.joints.set_velocity_gains(policy.D)
@@ -155,7 +154,7 @@ def control_loop():
     while (not device.is_timeout and k < params.max_steps/10):
 
         # Update sensor data (IMU, encoders, Motion capture)
-        policy.update_observation()
+        policy.update_observation(device)
 
         q_des = policy.forward()
 
@@ -168,7 +167,7 @@ def control_loop():
 
         # Send command to the robot
         for j in range(int(params.control_dt/params.dt)):
-            joy.update_v_ref(k*10 + j, 0)
+            joy.update_v_ref(k*10 + j + 1, 0)
             device.parse_sensor_data()
             device.send_command_and_wait_end_of_cycle(params.dt)
             if params.LOGGING:

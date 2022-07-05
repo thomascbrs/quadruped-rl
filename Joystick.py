@@ -1,7 +1,7 @@
 # coding: utf8
 
 import numpy as np
-import raisimGymTorch.scripts.gamepadClient as gC
+import gamepadClient as gC
 
 LAASGAMEPAD=False
 
