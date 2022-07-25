@@ -3,7 +3,7 @@
 import numpy as np
 import gamepadClient as gC
 
-LAASGAMEPAD=False
+LAASGAMEPAD=True
 
 class Joystick:
     """Joystick-like controller that outputs the reference velocity in local frame
