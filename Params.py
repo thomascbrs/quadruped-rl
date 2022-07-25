@@ -42,10 +42,10 @@ class RLParams():
                                 -0.04, 0.7, -1.4, 0.04, 0.7, -1.4])
 
         if self.symmetric_pose:
-            self.q_init = np.array([-0.04, 0.7, -1.4, 0.04, 0.7, -1.4, \
-                                    -0.04, -0.7, 1.4, 0.04, -0.7, 1.4])
+            self.q_init = np.array([-0.04, 0.8, -1.6, 0.04, 0.8, -1.6, \
+                                    -0.04, -0.8, 1.6, 0.04, -0.8, 1.6])
            
-        self.alpha = 0.3859
+        self.alpha = 0.#3569
 
         # Other parameters
         self.config_file = "config_solo12.yaml"  #  Name of the yaml file containing hardware information
