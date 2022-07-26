@@ -28,9 +28,9 @@ class Joystick:
         self.vY = 0.
         self.vYaw = 0.
         self.vZ = 0.
-        self.VxScale = 1.5
-        self.VyScale = 0.0
-        self.vYawScale = 1.0
+        self.VxScale = 0.75
+        self.VyScale = 1.
+        self.vYawScale = .8
         self.vZScale = 0.3
     
         self.Vx_ref = 0.0
@@ -77,7 +77,7 @@ class Joystick:
                 self.gp.rightJoystickX.value = 0.00390625
 
             self.vX = (self.gp.leftJoystickX.value / 0.00390625 - 1 ) * self.VxScale
-            self.vY = (self.gp.leftJoystickY.value / 0.00390625 - 1 ) * self.VxScale
+            self.vY = (self.gp.leftJoystickY.value / 0.00390625 - 1 ) * self.VyScale
             self.vYaw = (self.gp.rightJoystickX.value / 0.00390625 - 1 ) * self.vYawScale
 
         else:
@@ -88,7 +88,7 @@ class Joystick:
                 self.gp.rightJoystickX.value = 0.
 
             self.vX = self.gp.leftJoystickX.value * self.VxScale
-            self.vY = self.gp.leftJoystickY.value * self.VxScale
+            self.vY = self.gp.leftJoystickY.value * self.VyScale
             self.vYaw = self.gp.rightJoystickX.value * self.vYawScale
 
 

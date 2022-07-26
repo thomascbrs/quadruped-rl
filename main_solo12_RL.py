@@ -41,8 +41,14 @@ class RLController():
         # state estimator if neededp
         #self.state_estimator = StateEstMLP2()
         #self.state_estimator.load('./checkpoints/state_estimation/state_estimator.txt')
-        self.state_estimator = MLP2(123, 11, [256,128])
-        self.state_estimator.load_state_dict(np.load('./tmp_checkpoints/state_estimation/state_estimator.npy', allow_pickle=True).item())
+
+        # non symmetric state est
+        #self.state_estimator = MLP2(123, 11, [256,128])
+        #self.state_estimator.load_state_dict(np.load('./tmp_checkpoints/state_estimation/state_estimator.npy', allow_pickle=True).item())
+
+        # symmetric state est
+        self.state_estimator = MLP2(123, 3, [256,128])
+        self.state_estimator.load_state_dict(np.load('./tmp_checkpoints/state_estimation/symmetric_state_estimator.npy', allow_pickle=True).item())
 
         # History Buffers
         self.num_history_stack = 6
@@ -118,6 +124,7 @@ def control_loop():
     # Load RL policy
     #policy = RLController(weight_path='./tmp_checkpoints/sym_pose/policy-07-01-12-42-53/full_2000.npy', use_state_est= True)
     policy = RLController(weight_path='./tmp_checkpoints/sym_pose/policy-07-05-23-16-12/full_2000.npy', use_state_est= True)
+    #policy = RLController(weight_path='./tmp_checkpoints/sym_pose/lateral-vel/policy-07-26-00-21-24/full_1500.npy', use_state_est= True)
 
     # Define joystick
     joy = Joystick()
