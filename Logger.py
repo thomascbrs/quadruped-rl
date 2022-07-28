@@ -139,7 +139,7 @@ class Logger():
         print(self.logSize)
         t_range = np.array([k*params.dt for k in range(self.logSize)])
 
-        self.processMocap()
+        #self.processMocap()
 
         index6 = [1, 3, 5, 2, 4, 6]
         index12 = [1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12]
@@ -241,11 +241,11 @@ class Logger():
             else:
                 plt.subplot(3, 2, index6[i], sharex=ax0)
 
-            if i < 3:
-                plt.plot(t_range, self.mocap_pos[:, i], "k", linewidth=3)
-            else:
-                plt.plot(t_range, self.mocap_RPY[:, i-3], "k", linewidth=3)
-            plt.legend(["Motion capture"], prop={'size': 8})
+            #if i < 3:
+                #plt.plot(t_range, self.mocap_pos[:, i], "k", linewidth=3)
+            #else:
+                #plt.plot(t_range, self.mocap_RPY[:, i-3], "k", linewidth=3)
+            #plt.legend(["Motion capture"], prop={'size': 8})
             plt.ylabel(lgd[i])
         self.custom_suptitle("Position and orientation")
 
@@ -261,12 +261,12 @@ class Logger():
             else:
                 plt.subplot(3, 2, index6[i], sharex=ax0)
 
-            if i < 3:
-                plt.plot(t_range, self.mocap_h_v[:, i], "k", linewidth=3)
-            else:
-                plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
+            #if i < 3:
+                #plt.plot(t_range, self.mocap_h_v[:, i], "k", linewidth=3)
+            #else:
+                #plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
             
-            plt.legend(["Motion capture"], prop={'size': 8})
+            #plt.legend(["Motion capture"], prop={'size': 8})
             plt.ylabel(lgd[i])
         self.custom_suptitle("Linear and angular velocities")
 
