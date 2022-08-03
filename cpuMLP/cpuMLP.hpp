@@ -5,6 +5,7 @@
 #include "iostream"
 #include <fstream>
 #include <cmath>
+#include "Types.h"
 
 template<int StateDim, int ActionDim>
 class MLP_3 {
@@ -14,6 +15,8 @@ class MLP_3 {
   typedef Eigen::Matrix<float, StateDim, 1> State;
 
   MLP_3() {
+
+    std::cout << "Creating MLP_3 with " << StateDim << " | " << ActionDim << std::endl;
 
     layersizes.push_back(StateDim);
     layersizes.reserve(layersizes.size() + hiddensizes.size());
@@ -69,7 +72,7 @@ class MLP_3 {
 
       int paramSize = 0;
       while (std::getline(lineStream, cell, ',')) { ///Read param
-        params[i](paramSize++) = std::stod(cell);
+        params[i](paramSize++) = std::stof(cell);
         if (paramSize == params[i].size()){
 	       	break;
         }
@@ -123,6 +126,8 @@ class MLP_2 {
 
   MLP_2() {
 
+    std::cout << "Creating MLP_2 with " << StateDim << " | " << ActionDim << std::endl;
+
     layersizes.push_back(StateDim);
     layersizes.reserve(layersizes.size() + hiddensizes.size());
     layersizes.insert(layersizes.end(), hiddensizes.begin(), hiddensizes.end());
@@ -177,7 +182,7 @@ class MLP_2 {
 
       int paramSize = 0;
       while (std::getline(lineStream, cell, ',')) { ///Read param
-        params[i](paramSize++) = std::stod(cell);
+        params[i](paramSize++) = std::stof(cell);
         if (paramSize == params[i].size()){
 	       	break;
         }
@@ -192,9 +197,10 @@ class MLP_2 {
   }
 
   inline Action forward(State &state) {
-
     lo[0] = state;
     for (int cnt = 0; cnt < (int)(Ws.size()) - 1; cnt++) {
+      std::cout << "---- " << cnt << std::endl;
+      std::cout << bs[cnt].transpose() << std::endl;
       lo[cnt + 1] = Ws[cnt] * lo[cnt] + bs[cnt];
       lo[cnt + 1] = lo[cnt + 1].cwiseMax(1e-2*lo[cnt + 1]);
     }
