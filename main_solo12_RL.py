@@ -72,27 +72,27 @@ class RLController():
         self.pTarget12[:] = params.q_init + 0.3 * self.policy.forward(self._obs).clip(-np.pi, np.pi)
         return self.pTarget12.copy()
 
-    def update_observation(self, device):
-        self.update_history(device) 
+    def update_observation(self, joints_pos, joints_vel, imu_ori, imu_gyro):
+        self.update_history(joints_pos, joints_vel) 
 
-        self.state_est_obs[:] =  np.hstack([pin.Quaternion(device.imu.attitude_quaternion.reshape((-1,1))).toRotationMatrix()[2,:],
-                                    device.joints.positions.flatten(),
-                                    device.joints.velocities.flatten(),
-                                    self.previous_action,
-                                    self.preprevious_action,
-                                    self.q_pos_error_hist[0],
-                                    self.qd_hist[0],
-                                    self.q_pos_error_hist[2],
-                                    self.qd_hist[2],
-                                    self.q_pos_error_hist[4],
-                                    self.qd_hist[4]])
+        self.state_est_obs[:] =  np.hstack([pin.rpy.rpyToMatrix(imu_ori)[2, :],
+                                            joints_pos.flatten(),
+                                            joints_vel.flatten(),
+                                            self.previous_action,
+                                            self.preprevious_action,
+                                            self.q_pos_error_hist[0],
+                                            self.qd_hist[0],
+                                            self.q_pos_error_hist[2],
+                                            self.qd_hist[2],
+                                            self.q_pos_error_hist[4],
+                                            self.qd_hist[4]])
 
-        self._obs[:] = np.hstack([pin.Quaternion(device.imu.attitude_quaternion.reshape((-1,1))).toRotationMatrix()[2,:],
+        self._obs[:] = np.hstack([pin.rpy.rpyToMatrix(imu_ori)[2, :],
                                   self.state_estimator.forward(self.state_est_obs)[:3],
-                                  device.imu.gyroscope.flatten(),
+                                  imu_gyro.flatten(),
                                   self.vel_command,
-                                  device.joints.positions.flatten(),
-                                  device.joints.velocities.flatten(),
+                                  joints_pos.flatten(),
+                                  joints_vel.flatten(),
                                   self.previous_action,
                                   self.preprevious_action,
                                   self.q_pos_error_hist[0],
@@ -102,14 +102,14 @@ class RLController():
                                   self.q_pos_error_hist[4],
                                   self.qd_hist[4]])
 
-    def update_history(self, device):
+    def update_history(self, joints_pos, joints_vel):
         tmp = self.q_pos_error_hist.copy()
         self.q_pos_error_hist[:-1,:] = tmp[1:,:]
-        self.q_pos_error_hist[-1,:] = self.pTarget12 - device.joints.positions
+        self.q_pos_error_hist[-1,:] = self.pTarget12 - joints_pos.flatten()
 
         tmp = self.qd_hist.copy()
         self.qd_hist[:-1,:] = tmp[1:,:]
-        self.qd_hist[-1,:] = device.joints.velocities
+        self.qd_hist[-1,:] = joints_vel.flatten()
 
         self.preprevious_action[:] = self.previous_action.copy()
         self.previous_action[:] = self.pTarget12.copy()
