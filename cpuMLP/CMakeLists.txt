@@ -8,8 +8,10 @@ include_directories("eigen3" ${TORCH_INCLUDE_DIRS})
 
 pybind11_add_module(policy cpuMLP.cpp cpuMLP.hpp)
 pybind11_add_module(stateEst cpuMLP.cpp cpuMLP.hpp)
+pybind11_add_module(stateEst3 cpuMLP.cpp cpuMLP.hpp)
 
 add_executable(cpp-mlp main.cpp)
 set_property(TARGET cpp-mlp PROPERTY CXX_STANDARD 14)
 set_property(TARGET policy PROPERTY CXX_STANDARD 14)
 set_property(TARGET stateEst PROPERTY CXX_STANDARD 14)
+set_property(TARGET stateEst3 PROPERTY CXX_STANDARD 14)

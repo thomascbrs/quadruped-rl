@@ -20,3 +20,11 @@ PYBIND11_MODULE(stateEst, m) {
     .def("forward", &MLP_2<123, 11>::forward)
     ;
 }
+
+PYBIND11_MODULE(stateEst3, m) {
+  py::class_<MLP_2<123, 3>>(m, "StateEstMLP3")
+    .def(py::init<>())
+    .def("load", &MLP_2<123, 3>::updateParamFromTxt)
+    .def("forward", &MLP_2<123, 3>::forward)
+    ;
+}
