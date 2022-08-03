@@ -53,7 +53,7 @@ class cMLP2 {
   Matrix3 rpyToMatrix(float r, float p, float y);
 
   // Control policy
-  MLP_2<132, 12> policy_;
+  MLP_3<132, 12> policy_;
 
   // Estimation policy
   MLP_2<123, 3> state_estimator_;
@@ -184,11 +184,12 @@ void cMLP2::update_observation(Vector12 pos, Vector12 vel, Vector3 ori, Vector3 
   obs_.segment<12>(12 + 12 * 1) = vel;
   obs_.segment<12>(12 + 12 * 2) = previous_action_;
   obs_.segment<12>(12 + 12 * 3) = preprevious_action_;
-  obs_.segment<12>(12 + 12 * 4) = qd_hist_.row(0);
-  obs_.segment<12>(12 + 12 * 5) = q_pos_error_hist_.row(2);
-  obs_.segment<12>(12 + 12 * 6) = qd_hist_.row(2);
-  obs_.segment<12>(12 + 12 * 7) = q_pos_error_hist_.row(4);
-  obs_.segment<12>(12 + 12 * 8) = qd_hist_.row(4);
+  obs_.segment<12>(12 + 12 * 4) = q_pos_error_hist_.row(0);
+  obs_.segment<12>(12 + 12 * 5) = qd_hist_.row(0);
+  obs_.segment<12>(12 + 12 * 6) = q_pos_error_hist_.row(2);
+  obs_.segment<12>(12 + 12 * 7) = qd_hist_.row(2);
+  obs_.segment<12>(12 + 12 * 8) = q_pos_error_hist_.row(4);
+  obs_.segment<12>(12 + 12 * 9) = qd_hist_.row(4);
 
 }
 
