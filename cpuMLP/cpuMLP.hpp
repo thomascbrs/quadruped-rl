@@ -16,8 +16,6 @@ class MLP_3 {
 
   MLP_3() {
 
-    std::cout << "Creating MLP_3 with " << StateDim << " | " << ActionDim << std::endl;
-
     layersizes.push_back(StateDim);
     layersizes.reserve(layersizes.size() + hiddensizes.size());
     layersizes.insert(layersizes.end(), hiddensizes.begin(), hiddensizes.end());
@@ -126,8 +124,6 @@ class MLP_2 {
 
   MLP_2() {
 
-    std::cout << "Creating MLP_2 with " << StateDim << " | " << ActionDim << std::endl;
-
     layersizes.push_back(StateDim);
     layersizes.reserve(layersizes.size() + hiddensizes.size());
     layersizes.insert(layersizes.end(), hiddensizes.begin(), hiddensizes.end());
@@ -199,8 +195,6 @@ class MLP_2 {
   inline Action forward(State &state) {
     lo[0] = state;
     for (int cnt = 0; cnt < (int)(Ws.size()) - 1; cnt++) {
-      std::cout << "---- " << cnt << std::endl;
-      std::cout << bs[cnt].transpose() << std::endl;
       lo[cnt + 1] = Ws[cnt] * lo[cnt] + bs[cnt];
       lo[cnt + 1] = lo[cnt + 1].cwiseMax(1e-2*lo[cnt + 1]);
     }

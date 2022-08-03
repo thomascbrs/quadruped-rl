@@ -2,15 +2,11 @@
 ///
 /// \brief This is the header for cMLP2 class
 ///
-/// \details Planner that outputs current and future locations of footsteps, the reference
-///          trajectory of the base and the position, velocity, acceleration commands for feet in
-///          swing phase based on the reference velocity given by the user and the current
-///          position/velocity of the base
+/// \details C++ interface between the control loop and the low-level neural network code
 ///
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "Types.h"
-// #include "pinocchio/math/rpy.hpp"
 #include "cpuMLP.hpp"
 
 class cMLP2 {
@@ -153,7 +149,6 @@ Vector12 cMLP2::forward() {
   obs_ = ((obs_ - obs_mean_).array() / (obs_var_ + .1E-8f * Vector132::Ones()).cwiseSqrt().array()).matrix();
   obs_ = obs_.cwiseMax(-bound_).cwiseMin(bound_);
 
-  // std::cout << policy_.forward(obs_) << std::endl;
   pTarget12_ = q_init_ + 0.3f * policy_.forward(obs_).cwiseMax(-bound_pi_).cwiseMin(bound_pi_);
 
   return pTarget12_;

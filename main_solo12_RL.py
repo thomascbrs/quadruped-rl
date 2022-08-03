@@ -39,10 +39,6 @@ class RLController():
         self.obs_mean  = np.loadtxt(weight_dir + "/mean" + str(iteration) + ".csv",dtype=np.float32)
         self.obs_var = np.loadtxt(weight_dir + "/var" + str(iteration) + ".csv",dtype=np.float32)
 
-        """print(weight_path)
-        print(weight_dir + "/mean" + str(iteration) + ".csv")
-        print(weight_dir + "/var" + str(iteration) + ".csv")"""
-
         # state estimator if neededp
         #self.state_estimator = StateEstMLP2()
         #self.state_estimator.load('./checkpoints/state_estimation/state_estimator.txt')
@@ -144,11 +140,6 @@ def control_loop():
     estDirName = "tmp_checkpoints/state_estimation/symmetric_state_estimator.txt"
     test.initialize(polDirName, estDirName, params.q_init.copy())
 
-    print("--- Init")
-    print(np.allclose(policy.state_est_obs, test.state_est_obs_, rtol=1e-05, atol=1e-05))
-    print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
-    print(np.allclose(policy.pTarget12, test.pTarget12_, rtol=1e-05, atol=1e-05))
-
     # Define joystick
     joy = Joystick()
     joy.update_v_ref(0,0)
@@ -172,11 +163,6 @@ def control_loop():
                             device.imu.attitude_euler.reshape((-1, 1)),
                             device.imu.gyroscope.reshape((-1, 1)))
 
-    print("--- First")
-    print(np.allclose(policy.state_est_obs, test.state_est_obs_, rtol=1e-05, atol=1e-05))
-    print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
-    print(np.allclose(policy.pTarget12, test.pTarget12_, rtol=1e-05, atol=1e-05))
-
     device.joints.set_position_gains(policy.P)
     device.joints.set_velocity_gains(policy.D)
     device.joints.set_desired_positions(policy.pTarget12)
@@ -198,16 +184,9 @@ def control_loop():
                                 device.joints.velocities.reshape((-1, 1)),
                                 device.imu.attitude_euler.reshape((-1, 1)),
                                 device.imu.gyroscope.reshape((-1, 1)))
-        print("---- FORWARDOS")
 
         q_des = policy.forward()
-        print("SWAP")
         q_des_bis = test.forward()
-
-        print("--- Forward")
-        print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
-        from IPython import embed
-        embed()
 
         # Set desired quantities for the actuators
         device.joints.set_position_gains(policy.P)
@@ -253,6 +232,7 @@ def control_loop():
         print(np.allclose(policy.P, test.P_))
         print(np.allclose(policy.D, test.D_))
 
+        from IPython import embed
         embed()
 
         if params.record_video and k % 10==0:
