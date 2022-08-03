@@ -1,7 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include "cpuMLP.hpp"
-
+#include "cMLP2.hpp"
 
 int main() {
 
@@ -14,5 +13,11 @@ int main() {
   std::cout<<net.forward(input1)<<std::endl;
 
   MLP_2<123, 11> net2 = MLP_2<123, 11>();
+
+  std::cout << "----" << std::endl;
+  cMLP2 test = cMLP2();
+  std::string polDirName = "../../tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/";
+  std::string estDirName = "../../tmp_checkpoints/state_estimation/symmetric_state_estimator.txt";
+  test.initialize(polDirName, estDirName, Vector12::Ones());
 
 }
