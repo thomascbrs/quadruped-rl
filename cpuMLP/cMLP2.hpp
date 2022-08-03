@@ -52,8 +52,6 @@ class cMLP2 {
 
   Matrix3 rpyToMatrix(float r, float p, float y);
 
- private:
-
   // Control policy
   MLP_2<132, 12> policy_;
 
@@ -106,7 +104,7 @@ cMLP2::cMLP2()
 void cMLP2::initialize(std::string polDirName, std::string estFileName, Vector12 q_init) {
 
   // Control policy
-  policy_.updateParamFromTxt(polDirName + "");
+  policy_.updateParamFromTxt(polDirName + "full_2000.txt");
 
   // Estimation policy
   state_estimator_.updateParamFromTxt(estFileName);
@@ -114,26 +112,34 @@ void cMLP2::initialize(std::string polDirName, std::string estFileName, Vector12
   // Normalization
   std::string in_line;
   std::ifstream obsMean_file, obsVariance_file;
-  obsMean_file.open("mean.csv");
-  obsVariance_file.open("var.csv");
+  obsMean_file.open(polDirName + "mean2000.csv");
+  obsVariance_file.open(polDirName + "var2000.csv");
   if(obsMean_file.is_open()) {
     for(int i = 0; i < obs_mean_.size(); i++){
       std::getline(obsMean_file, in_line);
       obs_mean_(i) = std::stof(in_line);
     }   
     obsMean_file.close();
+  } else {
+    throw std::runtime_error("Failed to open obsMean file.");
   }
+
   if(obsVariance_file.is_open()) {
     for(int i = 0; i < obs_var_.size(); i++){
       std::getline(obsVariance_file, in_line);
       obs_var_(i) = std::stof(in_line);
     }
     obsVariance_file.close();   
+  } else {
+    throw std::runtime_error("Failed to open obsVariance file.");
   }
 
   // Control gains
   P_ = (Vector3(3.0f, 3.0f, 3.0f)).replicate<4, 1>();
   D_ = (Vector3(0.2f, 0.2f, 0.2f)).replicate<4, 1>();
+
+  // Velocity command
+  vel_command_ = Vector3(0.5f, 0.0f, 0.0f);
 
   // Initial position
   q_init_ = q_init;
@@ -144,9 +150,10 @@ void cMLP2::initialize(std::string polDirName, std::string estFileName, Vector12
 
 Vector12 cMLP2::forward() {
 
-  obs_ = ((obs_ - obs_mean_).array() / (obs_var_ + .1E-4f * Vector132::Ones()).cwiseSqrt().array()).matrix();
+  obs_ = ((obs_ - obs_mean_).array() / (obs_var_ + .1E-8f * Vector132::Ones()).cwiseSqrt().array()).matrix();
   obs_ = obs_.cwiseMax(-bound_).cwiseMin(bound_);
 
+  // std::cout << policy_.forward(obs_) << std::endl;
   pTarget12_ = q_init_ + 0.3f * policy_.forward(obs_).cwiseMax(-bound_pi_).cwiseMin(bound_pi_);
 
   return pTarget12_;
