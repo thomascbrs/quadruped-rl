@@ -9,12 +9,13 @@ import pinocchio as pin
 
 #from cpuMLP import PolicyMLP3, StateEstMLP2
 from numpy_mlp import MLP2
+from cpuMLP import Interface
 
 from Joystick import Joystick
 
 params = RLParams()
 np.set_printoptions(precision=3, linewidth=400)
-USE_JOYSTICK = True
+USE_JOYSTICK = False
 
 class RLController():
     def __init__(self, weight_path, use_state_est=False):
@@ -37,6 +38,10 @@ class RLController():
 
         self.obs_mean  = np.loadtxt(weight_dir + "/mean" + str(iteration) + ".csv",dtype=np.float32)
         self.obs_var = np.loadtxt(weight_dir + "/var" + str(iteration) + ".csv",dtype=np.float32)
+
+        """print(weight_path)
+        print(weight_dir + "/mean" + str(iteration) + ".csv")
+        print(weight_dir + "/var" + str(iteration) + ".csv")"""
 
         # state estimator if neededp
         #self.state_estimator = StateEstMLP2()
@@ -73,6 +78,7 @@ class RLController():
 
     def update_observation(self, device):
         self.update_history(device) 
+
         self.state_est_obs[:] =  np.hstack([pin.Quaternion(device.imu.attitude_quaternion.reshape((-1,1))).toRotationMatrix()[2,:],
                                     device.joints.positions.flatten(),
                                     device.joints.velocities.flatten(),
@@ -133,6 +139,16 @@ def control_loop():
     #policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/6cm/policy-07-29-10-59-14/full_2000.npy', use_state_est=True)
     policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/full_2000.npy', use_state_est=True)
 
+    test = Interface()
+    polDirName = "tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/"
+    estDirName = "tmp_checkpoints/state_estimation/symmetric_state_estimator.txt"
+    test.initialize(polDirName, estDirName, params.q_init.copy())
+
+    print("--- Init")
+    print(np.allclose(policy.state_est_obs, test.state_est_obs_, rtol=1e-05, atol=1e-05))
+    print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
+    print(np.allclose(policy.pTarget12, test.pTarget12_, rtol=1e-05, atol=1e-05))
+
     # Define joystick
     joy = Joystick()
     joy.update_v_ref(0,0)
@@ -149,6 +165,17 @@ def control_loop():
     device.parse_sensor_data()
     policy.pTarget12 = params.q_init.copy()
     policy.update_observation(device)
+
+    test.pTarget12_ = params.q_init.copy()
+    test.update_observation(device.joints.positions.reshape((-1, 1)),
+                            device.joints.velocities.reshape((-1, 1)),
+                            device.imu.attitude_euler.reshape((-1, 1)),
+                            device.imu.gyroscope.reshape((-1, 1)))
+
+    print("--- First")
+    print(np.allclose(policy.state_est_obs, test.state_est_obs_, rtol=1e-05, atol=1e-05))
+    print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
+    print(np.allclose(policy.pTarget12, test.pTarget12_, rtol=1e-05, atol=1e-05))
 
     device.joints.set_position_gains(policy.P)
     device.joints.set_velocity_gains(policy.D)
@@ -167,8 +194,20 @@ def control_loop():
 
         # Update sensor data (IMU, encoders, Motion capture)
         policy.update_observation(device)
+        test.update_observation(device.joints.positions.reshape((-1, 1)),
+                                device.joints.velocities.reshape((-1, 1)),
+                                device.imu.attitude_euler.reshape((-1, 1)),
+                                device.imu.gyroscope.reshape((-1, 1)))
+        print("---- FORWARDOS")
 
         q_des = policy.forward()
+        print("SWAP")
+        q_des_bis = test.forward()
+
+        print("--- Forward")
+        print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
+        from IPython import embed
+        embed()
 
         # Set desired quantities for the actuators
         device.joints.set_position_gains(policy.P)
@@ -195,6 +234,7 @@ def control_loop():
             vy = joy.v_ref[1,0] * int(params.enable_lateral_vel)
             vy = 0 if abs(vy) < 0.3 else vy
             policy.vel_command = np.array([vx, vy, wz])
+            test.vel_command = np.array([vx, vy, wz])
             #print(vx, wz, joy.v_ref)
 
         elif k > 0 and k % 300 ==0:
@@ -203,6 +243,17 @@ def control_loop():
             wz = np.random.uniform(-1, 1)
             wz = 0 if abs(wz) < 0.3 else wz
             policy.vel_command = np.array([vx, 0, wz])
+            test.vel_command = np.array([vx, 0, wz])
+
+        print("--- Loop")
+        print(np.allclose(policy.state_est_obs, test.state_est_obs_, rtol=1e-05, atol=1e-05))
+        print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
+        print(np.allclose(policy.pTarget12, test.pTarget12_, rtol=1e-05, atol=1e-05))
+        print(np.allclose(q_des, q_des_bis))
+        print(np.allclose(policy.P, test.P_))
+        print(np.allclose(policy.D, test.D_))
+
+        embed()
 
         if params.record_video and k % 10==0:
             save_frame_video(int(k//10), './recordings/')
