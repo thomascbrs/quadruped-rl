@@ -133,16 +133,17 @@ def control_loop():
 
     # symmetric policy trained with 6cm foot cl
     #policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/6cm/policy-07-29-10-59-14/full_2000.npy', use_state_est=True)
-    policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/full_2000.npy', use_state_est=True)
+    # policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/full_2000.npy', use_state_est=True)
 
-    test = Interface()
+    # Run full c++ Interface
+    policy = Interface()
     polDirName = "tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/"
     estDirName = "tmp_checkpoints/state_estimation/symmetric_state_estimator.txt"
-    test.initialize(polDirName, estDirName, params.q_init.copy())
+    policy.initialize(polDirName, estDirName, params.q_init.copy())
 
     # Define joystick
     joy = Joystick()
-    joy.update_v_ref(0,0)
+    joy.update_v_ref(0, 0)
 
     if params.LOGGING:
         from Logger import Logger
@@ -155,13 +156,10 @@ def control_loop():
     # Init Histories **********************************************
     device.parse_sensor_data()
     policy.pTarget12 = params.q_init.copy()
-    policy.update_observation(device)
-
-    test.pTarget12_ = params.q_init.copy()
-    test.update_observation(device.joints.positions.reshape((-1, 1)),
-                            device.joints.velocities.reshape((-1, 1)),
-                            device.imu.attitude_euler.reshape((-1, 1)),
-                            device.imu.gyroscope.reshape((-1, 1)))
+    policy.update_observation(device.joints.positions.reshape((-1, 1)),
+                              device.joints.velocities.reshape((-1, 1)),
+                              device.imu.attitude_euler.reshape((-1, 1)),
+                              device.imu.gyroscope.reshape((-1, 1)))
 
     device.joints.set_position_gains(policy.P)
     device.joints.set_velocity_gains(policy.D)
@@ -179,14 +177,12 @@ def control_loop():
     while (not device.is_timeout and k < params.max_steps/10):
 
         # Update sensor data (IMU, encoders, Motion capture)
-        policy.update_observation(device)
-        test.update_observation(device.joints.positions.reshape((-1, 1)),
-                                device.joints.velocities.reshape((-1, 1)),
-                                device.imu.attitude_euler.reshape((-1, 1)),
-                                device.imu.gyroscope.reshape((-1, 1)))
+        policy.update_observation(device.joints.positions.reshape((-1, 1)),
+                                  device.joints.velocities.reshape((-1, 1)),
+                                  device.imu.attitude_euler.reshape((-1, 1)),
+                                  device.imu.gyroscope.reshape((-1, 1)))
 
         q_des = policy.forward()
-        q_des_bis = test.forward()
 
         # Set desired quantities for the actuators
         device.joints.set_position_gains(policy.P)
@@ -213,7 +209,6 @@ def control_loop():
             vy = joy.v_ref[1,0] * int(params.enable_lateral_vel)
             vy = 0 if abs(vy) < 0.3 else vy
             policy.vel_command = np.array([vx, vy, wz])
-            test.vel_command = np.array([vx, vy, wz])
             #print(vx, wz, joy.v_ref)
 
         elif k > 0 and k % 300 ==0:
@@ -222,18 +217,6 @@ def control_loop():
             wz = np.random.uniform(-1, 1)
             wz = 0 if abs(wz) < 0.3 else wz
             policy.vel_command = np.array([vx, 0, wz])
-            test.vel_command = np.array([vx, 0, wz])
-
-        print("--- Loop")
-        print(np.allclose(policy.state_est_obs, test.state_est_obs_, rtol=1e-05, atol=1e-05))
-        print(np.allclose(policy._obs, test.obs_, rtol=1e-05, atol=1e-05))
-        print(np.allclose(policy.pTarget12, test.pTarget12_, rtol=1e-05, atol=1e-05))
-        print(np.allclose(q_des, q_des_bis))
-        print(np.allclose(policy.P, test.P_))
-        print(np.allclose(policy.D, test.D_))
-
-        from IPython import embed
-        embed()
 
         if params.record_video and k % 10==0:
             save_frame_video(int(k//10), './recordings/')
