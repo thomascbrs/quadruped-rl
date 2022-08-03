@@ -127,10 +127,11 @@ def control_loop():
 
     #policies trained with 3vel + energy penalty
     # symmetric policy trained with 9cm foot cl
-    policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/policy-07-28-00-10-01/full_2000.npy', use_state_est= True)
+    #policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/policy-07-28-00-10-01/full_2000.npy', use_state_est= True)
 
     # symmetric policy trained with 6cm foot cl
     #policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/6cm/policy-07-29-10-59-14/full_2000.npy', use_state_est=True)
+    policy = RLController(weight_path='./tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/full_2000.npy', use_state_est=True)
 
     # Define joystick
     joy = Joystick()
