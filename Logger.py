@@ -86,10 +86,10 @@ class Logger():
 
         self.k += 1
 
-    def saveAll(self, fileName="dataSensors"):
+    def saveAll(self, fileName="dataSensors", suffix=""):
         date_str = datetime.now().strftime('_%Y_%m_%d_%H_%M')
 
-        np.savez_compressed(fileName + date_str + ".npz",
+        np.savez_compressed(fileName + date_str + suffix + ".npz",
                             q_mes=self.q_mes,
                             q_des=self.q_des,
                             P=self.P,
@@ -112,6 +112,33 @@ class Logger():
                             mocapOrientationMat9=self.mocapOrientationMat9,
                             mocapOrientationQuat=self.mocapOrientationQuat,
                             tstamps=self.tstamps)
+
+    def loadAll(self, fileName):
+
+        data = np.load(fileName)
+
+        self.q_mes = data["q_mes"]
+        self.q_des = data["q_des"]
+        self.P = data["P"]
+        self.D = data["D"]
+        self.v_mes = data["v_mes"]
+        self.baseOrientation = data["baseOrientation"]
+        self.baseOrientationQuat = data["baseOrientationQuat"]
+        self.baseAngularVelocity = data["baseAngularVelocity"]
+        self.baseLinearAcceleration = data["baseLinearAcceleration"]
+        self.baseAccelerometer = data["baseAccelerometer"]
+        self.torquesFromCurrentMeasurment = data["torquesFromCurrentMeasurment"]
+        self.current = data["current"]
+        self.voltage = data["voltage"]
+        self.energy = data["energy"]
+        self.observation = data["observation"]
+        self.computation_time = data["computation_time"]
+        self.mocapPosition = data["mocapPosition"]
+        self.mocapVelocity = data["mocapVelocity"]
+        self.mocapAngularVelocity = data["mocapAngularVelocity"]
+        self.mocapOrientationMat9 = data["mocapOrientationMat9"]
+        self.mocapOrientationQuat = data["mocapOrientationQuat"]
+        self.tstamps = data["tstamps"]
 
     def processMocap(self):
 
@@ -143,11 +170,11 @@ class Logger():
         fig.suptitle(name)
         fig.canvas.manager.set_window_title(name)
 
-    def plotAll(self, params, replay):
+    def plotAll(self, dt, replay):
         from matplotlib import pyplot as plt
 
         print(self.logSize)
-        t_range = np.array([k*params.dt for k in range(self.logSize)])
+        t_range = np.array([k*dt for k in range(self.logSize)])
 
         self.processMocap()
 
@@ -312,3 +339,25 @@ class Logger():
         # Display all graphs and wait #
         ###############################
         plt.show(block=True)
+
+if __name__ == "__main__":
+
+    import sys
+    import os
+    from sys import argv
+    sys.path.insert(0, os.getcwd()) # adds current directory to python path
+
+    # Data file name to load
+    file_name = "dataSensors_2022_08_04_18_07_w3.npz"
+
+    # Retrieve length of log file
+    N = np.load(file_name)["tstamps"].shape[0]
+
+    # Create loggers
+    logger = Logger(logSize=N)
+
+    # Load data from .npz file
+    logger.loadAll(file_name)
+
+    # Call all ploting functions
+    logger.plotAll(0.001, None)
