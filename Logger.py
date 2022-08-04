@@ -270,6 +270,14 @@ class Logger():
             plt.ylabel(lgd[i])
         self.custom_suptitle("Linear and angular velocities")
 
+        ####
+        # Duration of each loop
+        ####
+
+        plt.figure()
+        plt.plot(t_range[:-1], np.diff(self.tstamps))
+        self.custom_suptitle("Duration of each loop [s]")
+
         ###############################
         # Display all graphs and wait #
         ###############################

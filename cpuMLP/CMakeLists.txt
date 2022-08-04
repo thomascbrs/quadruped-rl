@@ -7,6 +7,8 @@ set(PROJECT_URL https://gitlab.laas.fr/${PROJECT_NAMESPACE}/${PROJECT_NAME})
 
 project(${PROJECT_NAME} CXX)
 
+SET(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 set(CMAKE_PREFIX_PATH libtorch ${CMAKE_PREFIX_PATH})
 
 add_subdirectory(pybind11 pybind11)
