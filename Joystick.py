@@ -152,16 +152,14 @@ class Joystick:
 if __name__ == "__main__":
 
     from matplotlib import pyplot as plt
-    import libquadruped_reactive_walking as lqrw
     from time import clock
-    params = lqrw.Params()  # Object that holds all controller parameters
-    params.predefined_vel = False
-    joystick = Joystick(params)
+    joystick = Joystick()
+    joystick.update_v_ref(0, 0)
     k = 0
     vx = [0.0] * 1000
     fig = plt.figure()
     ax = plt.gca()
-    ax.set_ylim([-0.5, 0.5])
+    ax.set_ylim([-2.5, 2.5])
     h, = plt.plot(np.linspace(0.001, 1.0, 1000), vx, "b", linewidth=2)
     plt.xlabel("Time [s]")
     plt.ylabel("Forward reference velocity [m/s]")
