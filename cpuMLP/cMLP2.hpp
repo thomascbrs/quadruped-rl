@@ -48,6 +48,8 @@ class cMLP2 {
 
   Matrix3 rpyToMatrix(float r, float p, float y);
 
+  Vector132 get_observation() { return obs_; }
+
   // Control policy
   MLP_3<132, 12> policy_;
 

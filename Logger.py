@@ -31,6 +31,9 @@ class Logger():
         self.q_des = np.zeros([logSize, nb_motors])
         self.v_des = np.zeros([logSize, nb_motors])
 
+        # Observation by neural network
+        self.observation = np.zeros([logSize, 132])
+
         # Motion capture:
         self.mocapPosition = np.zeros([logSize, 3])
         self.mocapVelocity = np.zeros([logSize, 3])
@@ -41,7 +44,7 @@ class Logger():
         # Timestamps
         self.tstamps = np.zeros(logSize)
 
-    def sample(self, device, policy, qdes,  qualisys=None):
+    def sample(self, device, policy, qdes, obs, qualisys=None):
 
         # Logging from the device (data coming from the robot)
         self.q_mes[self.k] = device.joints.positions
@@ -59,8 +62,11 @@ class Logger():
         self.voltage[self.k] = device.powerboard.voltage
         self.energy[self.k] = device.powerboard.energy
 
+        # Logging observation of neural network
+        self.observation[self.k] = obs
+
         # Logging from qualisys (motion -- End of script --capture)
-        """if qualisys is not None:
+        if qualisys is not None:
             self.mocapPosition[self.k] = qualisys.getPosition()
             self.mocapVelocity[self.k] = qualisys.getVelocity()
             self.mocapAngularVelocity[self.k] = qualisys.getAngularVelocity()
@@ -71,7 +77,7 @@ class Logger():
             self.mocapVelocity[self.k] = device.baseVel[0]
             self.mocapAngularVelocity[self.k] = device.baseVel[1]
             self.mocapOrientationMat9[self.k] = device.rot_oMb
-            self.mocapOrientationQuat[self.k] = device.baseState[1]"""
+            self.mocapOrientationQuat[self.k] = device.baseState[1]
 
         # Logging timestamp
         self.tstamps[self.k] = time()
@@ -96,6 +102,7 @@ class Logger():
                             current=self.current,
                             voltage=self.voltage,
                             energy=self.energy,
+                            observation=self.observation,
                             mocapPosition=self.mocapPosition,
                             mocapVelocity=self.mocapVelocity,
                             mocapAngularVelocity=self.mocapAngularVelocity,
@@ -139,7 +146,7 @@ class Logger():
         print(self.logSize)
         t_range = np.array([k*params.dt for k in range(self.logSize)])
 
-        #self.processMocap()
+        self.processMocap()
 
         index6 = [1, 3, 5, 2, 4, 6]
         index12 = [1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12]
@@ -248,11 +255,11 @@ class Logger():
             else:
                 plt.subplot(3, 2, index6[i], sharex=ax0)
 
-            #if i < 3:
-                #plt.plot(t_range, self.mocap_pos[:, i], "k", linewidth=3)
-            #else:
-                #plt.plot(t_range, self.mocap_RPY[:, i-3], "k", linewidth=3)
-            #plt.legend(["Motion capture"], prop={'size': 8})
+            if i < 3:
+                plt.plot(t_range, self.mocap_pos[:, i], "k", linewidth=3)
+            else:
+                plt.plot(t_range, self.mocap_RPY[:, i-3], "k", linewidth=3)
+            plt.legend(["Motion capture"], prop={'size': 8})
             plt.ylabel(lgd[i])
         self.custom_suptitle("Position and orientation")
 
@@ -268,12 +275,13 @@ class Logger():
             else:
                 plt.subplot(3, 2, index6[i], sharex=ax0)
 
-            #if i < 3:
-                #plt.plot(t_range, self.mocap_h_v[:, i], "k", linewidth=3)
-            #else:
-                #plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
-            
-            #plt.legend(["Motion capture"], prop={'size': 8})
+            if i < 3:
+                plt.plot(t_range, self.mocap_h_v[:, i], "k", linewidth=3)
+                plt.plot(t_range, self.observation[:, 3 + i], "r", linewidth=3)
+            else:
+                plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
+
+            plt.legend(["Motion capture", "Observation"], prop={'size': 8})
             plt.ylabel(lgd[i])
         self.custom_suptitle("Linear and angular velocities")
 

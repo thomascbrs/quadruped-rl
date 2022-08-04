@@ -199,7 +199,7 @@ def control_loop():
             device.parse_sensor_data()
             device.send_command_and_wait_end_of_cycle(params.dt)
             if params.LOGGING or params.PLOTTING:
-                mini_logger.sample(device, policy, q_des, None)
+                mini_logger.sample(device, policy, q_des, policy.get_observation(), None)
 
         # Increment counter
         k += 1
