@@ -6,6 +6,7 @@
 ///
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <chrono>
 #include "Types.h"
 #include "cpuMLP.hpp"
 
@@ -50,6 +51,8 @@ class cMLP2 {
 
   Vector132 get_observation() { return obs_; }
 
+  float get_computation_time() { return static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(t_end_ - t_start_).count()); }
+
   // Control policy
   MLP_3<132, 12> policy_;
 
@@ -77,6 +80,8 @@ class cMLP2 {
   Vector132 obs_;
   Vector132 bound_;
   Vector12 bound_pi_;
+  std::chrono::time_point<std::chrono::steady_clock> t_start_;
+  std::chrono::time_point<std::chrono::steady_clock> t_end_;
 
 };
 
@@ -144,6 +149,10 @@ void cMLP2::initialize(std::string polDirName, std::string estFileName, Vector12
   previous_action_ = q_init;
   preprevious_action_ = q_init;
 
+  // Initial times
+  t_start_ = std::chrono::steady_clock::now();
+  t_end_ = std::chrono::steady_clock::now();
+
 }
 
 Vector12 cMLP2::forward() {
@@ -153,10 +162,16 @@ Vector12 cMLP2::forward() {
 
   pTarget12_ = q_init_ + 0.3f * policy_.forward(obs_).cwiseMax(-bound_pi_).cwiseMin(bound_pi_);
 
+  // Log time
+  t_end_ = std::chrono::steady_clock::now();
+
   return pTarget12_;
 }
 
 void cMLP2::update_observation(Vector12 pos, Vector12 vel, Vector3 ori, Vector3 gyro) {
+  // Log time
+  t_start_ = std::chrono::steady_clock::now();
+
   // Update the history
   update_history(pos, vel);
 

@@ -33,6 +33,7 @@ class Logger():
 
         # Observation by neural network
         self.observation = np.zeros([logSize, 132])
+        self.computation_time = np.zeros(logSize)
 
         # Motion capture:
         self.mocapPosition = np.zeros([logSize, 3])
@@ -44,7 +45,7 @@ class Logger():
         # Timestamps
         self.tstamps = np.zeros(logSize)
 
-    def sample(self, device, policy, qdes, obs, qualisys=None):
+    def sample(self, device, policy, qdes, obs, ctime, qualisys=None):
 
         # Logging from the device (data coming from the robot)
         self.q_mes[self.k] = device.joints.positions
@@ -64,6 +65,7 @@ class Logger():
 
         # Logging observation of neural network
         self.observation[self.k] = obs
+        self.computation_time[self.k] = ctime
 
         # Logging from qualisys (motion -- End of script --capture)
         if qualisys is not None:
@@ -103,6 +105,7 @@ class Logger():
                             voltage=self.voltage,
                             energy=self.energy,
                             observation=self.observation,
+                            computation_time=self.computation_time,
                             mocapPosition=self.mocapPosition,
                             mocapVelocity=self.mocapVelocity,
                             mocapAngularVelocity=self.mocapAngularVelocity,
@@ -292,6 +295,14 @@ class Logger():
         plt.figure()
         plt.plot(t_range[:-1], np.diff(self.tstamps))
         self.custom_suptitle("Duration of each loop [s]")
+
+        ####
+        # Duration of each loop
+        ####
+
+        plt.figure()
+        plt.plot(t_range, self.computation_time)
+        self.custom_suptitle("Computation time of the neural network [us]")
 
         ###############################
         # Display all graphs and wait #

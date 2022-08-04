@@ -65,14 +65,21 @@ class RLController():
         self.state_est_obs = np.zeros((123,))
         self._obs = np.zeros((132,))
 
+        self.t_0 = 0.0
+        self.t_1 = 0.0
+
     def forward(self):
 
         self._obs[:] = np.clip((self._obs - self.obs_mean) / np.sqrt(self.obs_var + 1e-8), -10, 10)
 
         self.pTarget12[:] = params.q_init + 0.3 * self.policy.forward(self._obs).clip(-np.pi, np.pi)
+
+        self.t_1 = time.time()
         return self.pTarget12.copy()
 
     def update_observation(self, joints_pos, joints_vel, imu_ori, imu_gyro):
+        self.t_0 = time.time()
+
         self.update_history(joints_pos, joints_vel) 
 
         self.state_est_obs[:] =  np.hstack([pin.rpy.rpyToMatrix(imu_ori)[2, :],
@@ -116,6 +123,10 @@ class RLController():
 
     def get_observation(self):
         return self._obs
+    
+    def get_computation_time(self):
+        # Computation time in us
+        return (self.t_1 - self.t_0) * 1e6
 
 def control_loop():
     """
@@ -199,7 +210,8 @@ def control_loop():
             device.parse_sensor_data()
             device.send_command_and_wait_end_of_cycle(params.dt)
             if params.LOGGING or params.PLOTTING:
-                mini_logger.sample(device, policy, q_des, policy.get_observation(), None)
+                mini_logger.sample(device, policy, q_des, policy.get_observation(),
+                                   policy.get_computation_time(), None)
 
         # Increment counter
         k += 1

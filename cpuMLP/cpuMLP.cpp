@@ -36,6 +36,7 @@ PYBIND11_MODULE(interface, m) {
     .def("forward", &cMLP2::forward)
     .def("update_observation", &cMLP2::update_observation)
     .def("get_observation", &cMLP2::get_observation)
+    .def("get_computation_time", &cMLP2::get_computation_time)
     .def_readwrite("obs_mean_", &cMLP2::obs_mean_)
     .def_readwrite("obs_var_", &cMLP2::obs_var_)
     .def_readwrite("P", &cMLP2::P_)
