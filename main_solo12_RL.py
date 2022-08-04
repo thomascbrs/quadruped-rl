@@ -148,7 +148,7 @@ def control_loop():
 
     # Run full c++ Interface
     policy = Interface()
-    polDirName = "tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/"
+    polDirName = "tmp_checkpoints/sym_pose/energy/6cm/w20/"
     estDirName = "tmp_checkpoints/state_estimation/symmetric_state_estimator.txt"
     policy.initialize(polDirName, estDirName, params.q_init.copy())
 
@@ -245,10 +245,10 @@ def control_loop():
     shutdown(device, params)
 
     if params.LOGGING:
-        mini_logger.saveAll()
+        mini_logger.saveAll(suffix = "_" + (polDirName.split("/")[-2]).replace(".", "-"))
         print("log saved")
     if params.LOGGING or params.PLOTTING:
-        mini_logger.plotAll(params, None)
+        mini_logger.plotAll(params.dt, None)
     return 0
 
 
