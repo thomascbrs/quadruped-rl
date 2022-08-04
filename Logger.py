@@ -212,11 +212,11 @@ class Logger():
         ####
         
         plt.figure()
-        for i in range(3):
+        for i in range(4):
             if i == 0:
-                ax0 = plt.subplot(3, 1, i+1)
+                ax0 = plt.subplot(4, 1, i+1)
             else:
-                plt.subplot(3, 1, i+1, sharex=ax0)
+                plt.subplot(4, 1, i+1, sharex=ax0)
 
             if i == 0:
                 plt.plot(t_range, self.current[:], linewidth=2)
@@ -224,9 +224,16 @@ class Logger():
             elif i == 1:
                 plt.plot(t_range, self.voltage[:], linewidth=2)
                 plt.ylabel("Bus voltage [V]")
-            else:
+            elif i == 2:
                 plt.plot(t_range, self.energy[:], linewidth=2)
                 plt.ylabel("Bus energy [J]")
+            else:
+                power = self.current[:] * self.voltage[:]
+                plt.plot(t_range, power, linewidth=2)
+                N = 10
+                plt.plot(t_range[(N-1):], np.convolve(power, np.ones(N)/N, mode='valid'), linewidth=2)
+                plt.legend(["Raw", "Averaged 10 ms"])
+                plt.ylabel("Bus power [W]")
                 plt.xlabel("Time [s]")
         self.custom_suptitle("Energy profiles")
 
