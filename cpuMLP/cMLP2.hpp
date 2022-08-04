@@ -78,6 +78,7 @@ class cMLP2 {
   Vector3 vel_command_;
   Vector123 state_est_obs_;
   Vector132 obs_;
+  Vector132 obs_normalized_;
   Vector132 bound_;
   Vector12 bound_pi_;
   std::chrono::time_point<std::chrono::steady_clock> t_start_;
@@ -99,6 +100,7 @@ cMLP2::cMLP2()
       vel_command_(Vector3::Zero()),
       state_est_obs_(Eigen::Matrix<float, 123, 1>::Zero()),
       obs_(Vector132::Zero()),
+      obs_normalized_(Vector132::Zero()),
       bound_(Vector132::Ones() * 10.0f),
       bound_pi_(Vector12::Ones() * 3.1415f) {
   // Empty
@@ -157,10 +159,10 @@ void cMLP2::initialize(std::string polDirName, std::string estFileName, Vector12
 
 Vector12 cMLP2::forward() {
 
-  obs_ = ((obs_ - obs_mean_).array() / (obs_var_ + .1E-8f * Vector132::Ones()).cwiseSqrt().array()).matrix();
-  obs_ = obs_.cwiseMax(-bound_).cwiseMin(bound_);
+  obs_normalized_ = ((obs_ - obs_mean_).array() / (obs_var_ + .1E-8f * Vector132::Ones()).cwiseSqrt().array()).matrix();
+  obs_normalized_ = obs_normalized_.cwiseMax(-bound_).cwiseMin(bound_);
 
-  pTarget12_ = q_init_ + 0.3f * policy_.forward(obs_).cwiseMax(-bound_pi_).cwiseMin(bound_pi_);
+  pTarget12_ = q_init_ + 0.3f * policy_.forward(obs_normalized_).cwiseMax(-bound_pi_).cwiseMin(bound_pi_);
 
   // Log time
   t_end_ = std::chrono::steady_clock::now();

@@ -64,15 +64,15 @@ class RLController():
 
         self.state_est_obs = np.zeros((123,))
         self._obs = np.zeros((132,))
+        self._obs_normalized = np.zeros((132,))
 
         self.t_0 = 0.0
         self.t_1 = 0.0
 
     def forward(self):
+        self._obs_normalized[:] = np.clip((self._obs - self.obs_mean) / np.sqrt(self.obs_var + 1e-8), -10, 10)
 
-        self._obs[:] = np.clip((self._obs - self.obs_mean) / np.sqrt(self.obs_var + 1e-8), -10, 10)
-
-        self.pTarget12[:] = params.q_init + 0.3 * self.policy.forward(self._obs).clip(-np.pi, np.pi)
+        self.pTarget12[:] = params.q_init + 0.3 * self.policy.forward(self._obs_normalized).clip(-np.pi, np.pi)
 
         self.t_1 = time.time()
         return self.pTarget12.copy()
@@ -211,7 +211,7 @@ def control_loop():
             device.send_command_and_wait_end_of_cycle(params.dt)
             if params.LOGGING or params.PLOTTING:
                 mini_logger.sample(device, policy, q_des, policy.get_observation(),
-                                   policy.get_computation_time(), None)
+                                   policy.get_computation_time(), qc)
 
         # Increment counter
         k += 1
