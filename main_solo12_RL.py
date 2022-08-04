@@ -15,7 +15,7 @@ from Joystick import Joystick
 
 params = RLParams()
 np.set_printoptions(precision=3, linewidth=400)
-USE_JOYSTICK = False
+USE_JOYSTICK = True
 
 class RLController():
     def __init__(self, weight_path, use_state_est=False):
@@ -142,10 +142,11 @@ def control_loop():
     policy.initialize(polDirName, estDirName, params.q_init.copy())
 
     # Define joystick
-    joy = Joystick()
-    joy.update_v_ref(0, 0)
+    if USE_JOYSTICK:
+        joy = Joystick()
+        joy.update_v_ref(0, 0)
 
-    if params.LOGGING:
+    if params.LOGGING or params.PLOTTING:
         from Logger import Logger
         mini_logger = Logger(logSize=int(params.max_steps))
 
@@ -193,10 +194,11 @@ def control_loop():
 
         # Send command to the robot
         for j in range(int(params.control_dt/params.dt)):
-            joy.update_v_ref(k*10 + j + 1, 0)
+            if USE_JOYSTICK:
+                joy.update_v_ref(k*10 + j + 1, 0)
             device.parse_sensor_data()
             device.send_command_and_wait_end_of_cycle(params.dt)
-            if params.LOGGING:
+            if params.LOGGING or params.PLOTTING:
                 mini_logger.sample(device, policy, q_des, None)
 
         # Increment counter
@@ -233,6 +235,7 @@ def control_loop():
     if params.LOGGING:
         mini_logger.saveAll()
         print("log saved")
+    if params.LOGGING or params.PLOTTING:
         mini_logger.plotAll(params, None)
     return 0
 
