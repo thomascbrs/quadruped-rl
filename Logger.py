@@ -279,12 +279,16 @@ class Logger():
                 plt.subplot(3, 2, index6[i], sharex=ax0)
 
             if i < 3:
-                plt.plot(t_range, self.mocap_h_v[:, i], "k", linewidth=3)
                 plt.plot(t_range, self.observation[:, 3 + i], "r", linewidth=3)
+                plt.plot(t_range, self.mocap_h_v[:, i], "k", linewidth=3)
+                if i < 2:
+                    plt.plot(t_range, self.observation[:, 9 + i], "b", linewidth=3)
+                plt.legend(["Observation", "Motion capture", "Reference"], prop={'size': 8})
             else:
                 plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
-
-            plt.legend(["Motion capture", "Observation"], prop={'size': 8})
+                if i == 5:
+                    plt.plot(t_range, self.observation[:, 11], "b", linewidth=3)
+                plt.legend(["Motion capture", "Reference"], prop={'size': 8})
             plt.ylabel(lgd[i])
         self.custom_suptitle("Linear and angular velocities")
 
