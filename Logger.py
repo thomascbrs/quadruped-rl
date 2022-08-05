@@ -340,6 +340,27 @@ class Logger():
         ###############################
         plt.show(block=True)
 
+def analyse_consumption():
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import glob
+    files = np.sort(glob.glob('test_policies_2022_08_05/*.npz'))
+
+    for file in files:
+        data = np.load(file)
+        current = data['current']
+        voltage = data['voltage']
+        power = data['current'] * data['voltage']
+        joystick = data['observation'][:, 9 ]
+        mask = joystick>0.99
+        # plt.plot(power)
+        # plt.plot(joystick)
+        # plt.plot(mask)
+        # plt.figure()
+        # plt.plot(power[mask])
+        # plt.show()
+        print("{} \t Average power going 1m/s : {} W ".format((file.split("_")[-1]).split(sep=".")[0],power[mask].mean()))
+
 if __name__ == "__main__":
 
     import sys
