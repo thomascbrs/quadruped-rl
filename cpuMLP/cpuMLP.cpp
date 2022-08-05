@@ -1,7 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
-#include "cMLP2.hpp"
+#include "Interface.hpp"
 
 namespace py = pybind11;
 
@@ -30,23 +30,23 @@ PYBIND11_MODULE(stateEst3, m) {
 }
 
 PYBIND11_MODULE(interface, m) {
-  py::class_<cMLP2>(m, "Interface")
+  py::class_<Interface>(m, "Interface")
     .def(py::init<>())
-    .def("initialize", &cMLP2::initialize)
-    .def("forward", &cMLP2::forward)
-    .def("update_observation", &cMLP2::update_observation)
-    .def("get_observation", &cMLP2::get_observation)
-    .def("get_computation_time", &cMLP2::get_computation_time)
-    .def_readwrite("obs_mean_", &cMLP2::obs_mean_)
-    .def_readwrite("obs_var_", &cMLP2::obs_var_)
-    .def_readwrite("P", &cMLP2::P_)
-    .def_readwrite("D", &cMLP2::D_)
-    .def_readwrite("pTarget12", &cMLP2::pTarget12_)
-    .def_readwrite("q_init_", &cMLP2::q_init_)
-    .def_readwrite("vel_command", &cMLP2::vel_command_)
-    .def_readwrite("state_est_obs_", &cMLP2::state_est_obs_)
-    .def_readwrite("obs_", &cMLP2::obs_)
-    .def_readwrite("bound_", &cMLP2::bound_)
-    .def_readwrite("bound_pi_", &cMLP2::bound_pi_)
+    .def("initialize", &Interface::initialize)
+    .def("forward", &Interface::forward)
+    .def("update_observation", &Interface::update_observation)
+    .def("get_observation", &Interface::get_observation)
+    .def("get_computation_time", &Interface::get_computation_time)
+    .def_readwrite("obs_mean_", &Interface::obs_mean_)
+    .def_readwrite("obs_var_", &Interface::obs_var_)
+    .def_readwrite("P", &Interface::P_)
+    .def_readwrite("D", &Interface::D_)
+    .def_readwrite("pTarget12", &Interface::pTarget12_)
+    .def_readwrite("q_init_", &Interface::q_init_)
+    .def_readwrite("vel_command", &Interface::vel_command_)
+    .def_readwrite("state_est_obs_", &Interface::state_est_obs_)
+    .def_readwrite("obs_", &Interface::obs_)
+    .def_readwrite("bound_", &Interface::bound_)
+    .def_readwrite("bound_pi_", &Interface::bound_pi_)
     ;
 }

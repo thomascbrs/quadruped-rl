@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include "cMLP2.hpp"
+#include "Interface.hpp"
 
 int main() {
 
@@ -15,7 +15,7 @@ int main() {
   MLP_2<123, 11> net2 = MLP_2<123, 11>();
 
   std::cout << "----" << std::endl;
-  cMLP2 test = cMLP2();
+  Interface test = Interface();
   std::string polDirName = "../../tmp_checkpoints/sym_pose/energy/6cm/policy-08-03-01-20-47/";
   std::string estDirName = "../../tmp_checkpoints/state_estimation/symmetric_state_estimator.txt";
   test.initialize(polDirName, estDirName, Vector12::Ones());

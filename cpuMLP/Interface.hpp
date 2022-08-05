@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///
-/// \brief This is the header for cMLP2 class
+/// \brief This is the header for Interface class
 ///
 /// \details C++ interface between the control loop and the low-level neural network code
 ///
@@ -10,21 +10,21 @@
 #include "Types.h"
 #include "cpuMLP.hpp"
 
-class cMLP2 {
+class Interface {
  public:
   ////////////////////////////////////////////////////////////////////////////////////////////////
   ///
   /// \brief Empty constructor
   ///
   ////////////////////////////////////////////////////////////////////////////////////////////////
-  cMLP2();
+  Interface();
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
   ///
   /// \brief Destructor.
   ///
   ////////////////////////////////////////////////////////////////////////////////////////////////
-  ~cMLP2() {}
+  ~Interface() {}
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
   ///
@@ -86,7 +86,7 @@ class cMLP2 {
 
 };
 
-cMLP2::cMLP2()
+Interface::Interface()
     : obs_mean_(Vector132::Zero()),
       obs_var_(Vector132::Zero()),
       q_pos_error_hist_(MatrixN::Zero(num_history_stack_, 12)),
@@ -106,7 +106,7 @@ cMLP2::cMLP2()
   // Empty
 }
 
-void cMLP2::initialize(std::string polDirName, std::string estFileName, Vector12 q_init) {
+void Interface::initialize(std::string polDirName, std::string estFileName, Vector12 q_init) {
 
   // Control policy
   policy_.updateParamFromTxt(polDirName + "full_2000.txt");
@@ -157,7 +157,7 @@ void cMLP2::initialize(std::string polDirName, std::string estFileName, Vector12
 
 }
 
-Vector12 cMLP2::forward() {
+Vector12 Interface::forward() {
 
   obs_normalized_ = ((obs_ - obs_mean_).array() / (obs_var_ + .1E-8f * Vector132::Ones()).cwiseSqrt().array()).matrix();
   obs_normalized_ = obs_normalized_.cwiseMax(-bound_).cwiseMin(bound_);
@@ -170,7 +170,7 @@ Vector12 cMLP2::forward() {
   return pTarget12_;
 }
 
-void cMLP2::update_observation(Vector12 pos, Vector12 vel, Vector3 ori, Vector3 gyro) {
+void Interface::update_observation(Vector12 pos, Vector12 vel, Vector3 ori, Vector3 gyro) {
   // Log time
   t_start_ = std::chrono::steady_clock::now();
 
@@ -207,7 +207,7 @@ void cMLP2::update_observation(Vector12 pos, Vector12 vel, Vector3 ori, Vector3 
 
 }
 
-void cMLP2::update_history(Vector12 pos, Vector12 vel) {
+void Interface::update_history(Vector12 pos, Vector12 vel) {
   // Age pos error history
   for (int index = 1; index < q_pos_error_hist_.rows(); index++) {
     q_pos_error_hist_.row(index - 1).swap(q_pos_error_hist_.row(index));
@@ -230,7 +230,7 @@ void cMLP2::update_history(Vector12 pos, Vector12 vel) {
 
 }
 
-Matrix3 cMLP2::rpyToMatrix(float r, float p, float y) {
+Matrix3 Interface::rpyToMatrix(float r, float p, float y) {
   typedef Eigen::AngleAxis<float> AngleAxis;
   return (AngleAxis(y, Vector3::UnitZ())
           * AngleAxis(p, Vector3::UnitY())
