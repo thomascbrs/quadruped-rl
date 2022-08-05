@@ -344,13 +344,18 @@ def analyse_consumption():
     import matplotlib.pyplot as plt
     import numpy as np
     import glob
-    files = np.sort(glob.glob('test_policies_2022_08_05/*.npz'))
+    files = np.sort(glob.glob('test_policies_2022_08_05/*.npz'))[:-2]
 
     for file in files:
         data = np.load(file)
         current = data['current']
         voltage = data['voltage']
         power = data['current'] * data['voltage']
+        mocap_v = data['mocapVelocity']
+        mocap_oRh = data["mocapOrientationMat9"]
+        mocap_h_v = np.zeros(mocap_v.shape)
+        for k in range(mocap_v.shape[0]):
+            mocap_h_v[k, :] = (mocap_oRh[k].transpose() @ mocap_v[k].reshape((-1, 1))).ravel()
         joystick = data['observation'][:, 9 ]
         mask = joystick>0.99
         # plt.plot(power)
@@ -359,7 +364,8 @@ def analyse_consumption():
         # plt.figure()
         # plt.plot(power[mask])
         # plt.show()
-        print("{} \t Average power going 1m/s : {} W ".format((file.split("_")[-1]).split(sep=".")[0],power[mask].mean()))
+        print("{} \t Average power going {:.3f} m/s : {:.3f} W ".format((file.split("_")[-1]).split(sep=".")[0],
+                                                                        mocap_h_v[mask, 0].mean(), power[mask].mean()))
 
 if __name__ == "__main__":
 
