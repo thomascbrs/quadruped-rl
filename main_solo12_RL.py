@@ -15,7 +15,6 @@ from Joystick import Joystick
 
 params = RLParams()
 np.set_printoptions(precision=3, linewidth=400)
-USE_JOYSTICK = True
 
 class RLController():
     def __init__(self, weight_path, use_state_est=False):
@@ -148,14 +147,19 @@ def control_loop():
 
     # Run full c++ Interface
     policy = Interface()
-    polDirName = "tmp_checkpoints/sym_pose/energy/6cm/w20/"
+    polDirName = "tmp_checkpoints/sym_pose/energy/6cm/w4-1/"
     estDirName = "tmp_checkpoints/state_estimation/symmetric_state_estimator.txt"
     policy.initialize(polDirName, estDirName, params.q_init.copy())
 
     # Define joystick
-    if USE_JOYSTICK:
+    if params.USE_JOYSTICK:
         joy = Joystick()
         joy.update_v_ref(0, 0)
+
+    if params.USE_PREDEFINED:
+        params.USE_JOYSTICK = False
+        v_ref = 0.0  # Starting reference velocity
+        alpha_v_ref = 0.03
 
     if params.LOGGING or params.PLOTTING:
         from Logger import Logger
@@ -205,7 +209,7 @@ def control_loop():
 
         # Send command to the robot
         for j in range(int(params.control_dt/params.dt)):
-            if USE_JOYSTICK:
+            if params.USE_JOYSTICK:
                 joy.update_v_ref(k*10 + j + 1, 0)
             device.parse_sensor_data()
             device.send_command_and_wait_end_of_cycle(params.dt)
@@ -215,7 +219,7 @@ def control_loop():
 
         # Increment counter
         k += 1
-        if USE_JOYSTICK:
+        if params.USE_JOYSTICK:
             vx = joy.v_ref[0,0]
             vx = 0 if abs(vx) < 0.3 else vx
             wz = joy.v_ref[-1,0]
@@ -224,6 +228,18 @@ def control_loop():
             vy = 0 if abs(vy) < 0.3 else vy
             policy.vel_command = np.array([vx, vy, wz])
             #print(vx, wz, joy.v_ref)
+
+        if params.USE_PREDEFINED:
+            t_rise = 100  # rising time to max vel
+            t_duration = 500  # in number of iterations
+            if k < t_rise + t_duration:
+                v_max = 1.0  # in m/s
+                v_gp = np.min([v_max * (k / t_rise), v_max])
+            else:
+                alpha_v_ref = 0.1
+                v_gp = 0.0  # Stop the robot
+            v_ref = alpha_v_ref * v_gp + (1 - alpha_v_ref) * v_ref  # Low-pass filter
+            policy.vel_command = np.array([v_ref, 0, 0])  
 
         elif k > 0 and k % 300 ==0:
             vx = np.random.uniform(-0.5 , 1.5)
