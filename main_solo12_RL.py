@@ -147,7 +147,7 @@ def control_loop():
 
     # Run full c++ Interface
     policy = Interface()
-    polDirName = "tmp_checkpoints/sym_pose/energy/6cm/w4-1/"
+    polDirName = "tmp_checkpoints/sym_pose/energy/6cm/w2/"
     estDirName = "tmp_checkpoints/state_estimation/symmetric_state_estimator.txt"
     policy.initialize(polDirName, estDirName, params.q_init.copy())
 
@@ -228,8 +228,7 @@ def control_loop():
             vy = 0 if abs(vy) < 0.3 else vy
             policy.vel_command = np.array([vx, vy, wz])
             #print(vx, wz, joy.v_ref)
-
-        if params.USE_PREDEFINED:
+        elif params.USE_PREDEFINED:
             t_rise = 100  # rising time to max vel
             t_duration = 500  # in number of iterations
             if k < t_rise + t_duration:
@@ -240,7 +239,6 @@ def control_loop():
                 v_gp = 0.0  # Stop the robot
             v_ref = alpha_v_ref * v_gp + (1 - alpha_v_ref) * v_ref  # Low-pass filter
             policy.vel_command = np.array([v_ref, 0, 0])  
-
         elif k > 0 and k % 300 ==0:
             vx = np.random.uniform(-0.5 , 1.5)
             vx = 0 if abs(vx) < 0.3 else vx
