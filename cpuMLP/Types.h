@@ -6,8 +6,8 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#include <string>
 #include <memory>
+#include <string>
 
 using Vector1 = Eigen::Matrix<float, 1, 1>;
 using Vector2 = Eigen::Matrix<float, 2, 1>;
