@@ -59,7 +59,7 @@ class RLController():
 
         self.pTarget12 = np.zeros((12,))
 
-        self.vel_command = np.array([0.5,0,0.])
+        self.vel_command = np.array([0.,0.,0.])
 
         self.state_est_obs = np.zeros((123,))
         self._obs = np.zeros((132,))
