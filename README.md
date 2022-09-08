@@ -20,10 +20,25 @@ See [https://github.com/Gepetto/soloRL] for more details about the training envi
     * `cd cpuMLP`
     * `mkdir build`
     * `cd build`
-    * `cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=~/install -DPYTHON_EXECUTABLE=$(which python3) -DPYTHON_STANDARD_LAYOUT=ON`
+    * `cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DPYTHON_EXECUTABLE=$(which python3) -DPYTHON_STANDARD_LAYOUT=ON`
     * `make`
 
-* Run the controller in simulation: `python3 main_solo12_replay.py` 
+* Run the controller in simulation: `python3 main_solo12_RL.py` 
+
+* You can make the simulation longer by tweaking the `max_steps` of `RLParams` in Params.py. The control loop runs at 1 kHz so the number is in milliseconds.
+
+* You can disable the plots at the end of the simulation by setting to False the variable `PLOTTING` of `RLParams` in Params.py.
+
+# Using a joystick
+
+* You can control the robot with your gamepad turning `USE_PREDEFINED` to False and `USE_JOYSTICK` to True.
+
+* You will likely have to tweak the following formulas in Joystick.py since the values returned for each axes depends on the model of your gamepad.
+```
+self.vX = (self.gp.leftJoystickX.value / 0.00390625 - 1 ) * self.VxScale
+self.vY = (self.gp.leftJoystickY.value / 0.00390625 - 1 ) * self.VyScale
+self.vYaw = (self.gp.rightJoystickX.value / 0.00390625 - 1 ) * self.vYawScale
+```
 
 # Deployment on a real Solo-12
 
