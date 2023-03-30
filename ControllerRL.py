@@ -3,7 +3,7 @@ import numpy as np
 import pinocchio as pin
 from time import time as clock
 
-def ControllerRL():
+class ControllerRL():
     def __init__(self, filename, q_init):
         """
         Load a RL policy previously saved using torch.jit.save for cpu.
@@ -22,11 +22,21 @@ def ControllerRL():
         # Observation
         self.obs = np.zeros(self._Nobs)
         self.act = np.zeros(self._Nact)
-        self.previous_action = np.zeros(self._Nact)
+        self.vel_command = np.array([0.,0.,0.])
 
+        # Scales 
+        self.scale_cmd_lin_vel = 2.0
+        self.scale_cmd_ang_vel = 0.25
+        self.scale_cmd = np.array([self.scale_cmd_lin_vel,self.scale_cmd_lin_vel,self.scale_cmd_ang_vel])
+        self.scale_ang_vel = 0.25
+        self.scale_dof_pos = 1.0
+        self.scale_dof_vel = 0.05
+        self.clip_observations = 100.
+        self.clip_actions = 100.
 
         # Load model
-        model = torch.jit.load(filename)
+        self.model = torch.jit.load(filename)
+        self.model.eval()
 
         # Initial joint position
         self.q_init = q_init
@@ -35,16 +45,39 @@ def ControllerRL():
         self._t0 = 0
         self._t1 = 0
 
+    def forward(self):
+        self._t2 = clock()
+
+        obs = torch.from_numpy(self.obs).float()
+        self.act = self.model(obs).detach().numpy()
+        self.act = np.clip(self.act, -self.clip_actions, self.clip_actions)
+        
+        self._t3 = clock()
+
+        return self.act
+
     def update_observation(self, joints_pos, joints_vel, imu_ori, imu_gyro):
         self._t0 = clock()
 
-        self.obs[:] = np.hstack([np.zeros(3),
-                                  imu_gyro.flatten(),
-                                  imu_ori,
-                                  self.vel_command,
-                                  joints_pos.flatten() - self.q_init,
-                                  joints_vel.flatten(),
-                                  self.previous_action,
+        self.joints_pos = joints_pos
+        self.joints_vel = joints_vel
+
+        self.obs = np.hstack([np.zeros(3),
+                                  imu_gyro.flatten() * self.scale_ang_vel,
+                                  imu_ori.flatten(),
+                                  self.vel_command * self.scale_cmd,
+                                  (joints_pos.flatten() - self.q_init) * self.scale_dof_pos,
+                                  joints_vel.flatten() * self.scale_dof_vel,
+                                  self.act,
                                   np.zeros(187)])
+        self.obs = np.clip(self.obs, -self.clip_observations, self.clip_observations)
 
         self._t1 = clock()
+
+    def get_observation(self):
+        return self.obs
+    
+      
+    def get_computation_time(self):
+        # Computation time in us
+        return (self._t3 - self._t2) * 1e6
