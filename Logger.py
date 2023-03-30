@@ -6,7 +6,7 @@ import pinocchio as pin
 
 class Logger():
     def __init__(self, device=None, qualisys=None, logSize=60e3):
-        logSize = np.int(logSize)
+        logSize = int(logSize)
         self.logSize = logSize
         nb_motors = 12
         self.k = 0
