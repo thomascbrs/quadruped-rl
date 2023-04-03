@@ -25,6 +25,7 @@ class ControllerRL():
         self.vel_command = np.array([0.,0.,0.])
 
         # Scales 
+        self.scale_actions = 0.3
         self.scale_cmd_lin_vel = 2.0
         self.scale_cmd_ang_vel = 0.25
         self.scale_cmd = np.array([self.scale_cmd_lin_vel,self.scale_cmd_lin_vel,self.scale_cmd_ang_vel])
@@ -44,32 +45,39 @@ class ControllerRL():
         # timings
         self._t0 = 0
         self._t1 = 0
-
+        self._t2 = 0
+        self._t3 = 0
+        
     def forward(self):
+        
         self._t2 = clock()
 
-        obs = torch.from_numpy(self.obs).float()
-        self.act = self.model(obs).detach().numpy()
+        obs = torch.from_numpy(self.obs).float().unsqueeze(0)            
+        self.act = self.model(obs).detach().numpy().squeeze()       
         self.act = np.clip(self.act, -self.clip_actions, self.clip_actions)
         
         self._t3 = clock()
 
-        return self.act
-
+        self.q_des = self.act * self.scale_actions + self.q_init
+        return self.q_des# self.q_init
+    
     def update_observation(self, joints_pos, joints_vel, imu_ori, imu_gyro):
         self._t0 = clock()
 
         self.joints_pos = joints_pos
         self.joints_vel = joints_vel
 
+        self.projected_gravity = imu_ori.flatten()
+        self.base_ang_vel = imu_gyro.flatten()
+        
         self.obs = np.hstack([np.zeros(3),
-                                  imu_gyro.flatten() * self.scale_ang_vel,
-                                  imu_ori.flatten(),
+                                  self.base_ang_vel * self.scale_ang_vel,
+                                  self.projected_gravity,
                                   self.vel_command * self.scale_cmd,
                                   (joints_pos.flatten() - self.q_init) * self.scale_dof_pos,
                                   joints_vel.flatten() * self.scale_dof_vel,
                                   self.act,
-                                  np.zeros(187)])
+                                  -1.5 * np.ones(187)])
         self.obs = np.clip(self.obs, -self.clip_observations, self.clip_observations)
 
         self._t1 = clock()

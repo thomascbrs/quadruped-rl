@@ -1,3 +1,6 @@
+
+import torch 
+
 import numpy as np
 import pybullet as pyb  # Pybullet server
 import pybullet_data
@@ -5,6 +8,18 @@ import time as time
 import sys
 import pinocchio as pin
 
+# from isaac gym utils
+@torch.jit.script
+def quat_rotate_inverse(q, v):
+    shape = q.shape
+    q_w = q[:, -1]
+    q_vec = q[:, :3]
+    a = v * (2.0 * q_w ** 2 - 1.0).unsqueeze(-1)
+    b = torch.cross(q_vec, v, dim=-1) * q_w.unsqueeze(-1) * 2.0
+    c = q_vec * \
+        torch.bmm(q_vec.view(shape[0], 1, 3), v.view(
+            shape[0], 3, 1)).squeeze(-1) * 2.0
+    return a - b + c
 
 class pybullet_simulator:
     """Wrapper for the PyBullet simulator to initialize the simulation, interact with it
@@ -238,7 +253,7 @@ class pybullet_simulator:
         robotStartPos = [0, 0, 0.0]
         robotStartOrientation = pyb.getQuaternionFromEuler([0.0, 0.0, 0.0])  # -np.pi/2
         
-        pyb.setAdditionalSearchPath("/opt/openrobots/share/example-robot-data/robots/solo_description/robots")
+        pyb.setAdditionalSearchPath("/mnt/BigHD_1/antoninbretagne/example-robot-data/robots/solo_description/robots")
         self.robotId = pyb.loadURDF("solo12.urdf", robotStartPos, robotStartOrientation)
 
         # Disable default motor control for revolute joints
@@ -545,7 +560,7 @@ class IMU():
         self.accelerometer = np.zeros((3, ))
         self.gyroscope = np.zeros((3, ))
         self.attitude_euler = np.zeros((3, ))
-        self.attitude_quaternion = np.array([[0.0, 0.0, 0.0, 1.0]])
+        self.attitude_quaternion = np.array([0.0, 0.0, 0.0, 1.0])
 
 class Powerboard():
     """Dummy class that simulates the Powerboard class used to communicate with the real masterboard"""
@@ -705,14 +720,18 @@ class PyBulletSimulator():
         self.baseVel = pyb.getBaseVelocity(self.pyb_sim.robotId)
         # print("baseVel: ", np.array([self.baseVel[0]]))
 
+     #   self.baseState = (self.baseState[0], [0,0,0,0])
+        base_quat = torch.tensor(self.baseState[1]).unsqueeze(0).float()
+     #   base_quat_inv = pin.Quaternion(*self.baseState[1]).inverse().matrix()
+        self.imu.attitude_quaternion[:] = np.array(self.baseState[1])
         # Orientation of the base (quaternion)
-        self.imu.attitude_quaternion[0,:] = np.array(self.baseState[1])
-        self.rot_oMb = pin.Quaternion(self.imu.attitude_quaternion.T).toRotationMatrix()
-        self.imu.attitude_euler[:] = pin.rpy.matrixToRpy(self.rot_oMb)
-        self.oMb = pin.SE3(self.rot_oMb, np.array([self.dummyHeight]).transpose())
-
+        self.imu.attitude_euler[:] = quat_rotate_inverse(base_quat, torch.tensor([[0.0, 0.0, -1.0]]).float())
+       
         # Angular velocities of the base
-        self.imu.gyroscope[:] = (self.oMb.rotation.transpose() @ np.array([self.baseVel[1]]).transpose()).ravel()
+        self.imu.gyroscope[:] = quat_rotate_inverse(base_quat, torch.tensor(self.baseVel[1]).unsqueeze(0).float())
+
+        self.rot_oMb = pin.Quaternion(self.imu.attitude_quaternion.T).toRotationMatrix()
+        self.oMb = pin.SE3(self.rot_oMb, np.array([self.dummyHeight]).transpose())
 
         # Linear Acceleration of the base
         self.o_baseVel = np.array([self.baseVel[0]]).transpose()

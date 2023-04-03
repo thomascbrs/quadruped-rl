@@ -32,7 +32,7 @@ def control_loop():
                 0., 0.9, -1.64,
                 0., 0.9 , -1.64 ])
     params.q_init = q_init
-    policy = ControllerRL("/mnt/BigHD_1/antoninbretagne/legged_gym/logs/solo12/exported/policies/policy_1.pt", q_init)
+    policy = ControllerRL("tmp_checkpoints/policy_1.pt", q_init)
     #p_tlicy = RLController(weight_path='./tmp_checkpoints/sym_pose/policy-07-05-23-16-12/full_2000.npy', use_state_est= True)
 
     #policies trained with 3vel + energy penalty
@@ -69,7 +69,6 @@ def control_loop():
 
     # Init Histories **********************************************
     device.parse_sensor_data()
-    policy.pTarget12 = params.q_init.copy()
     policy.update_observation(device.joints.positions.reshape((-1, 1)),
                               device.joints.velocities.reshape((-1, 1)),
                               device.imu.attitude_euler.reshape((-1, 1)),
@@ -77,18 +76,20 @@ def control_loop():
 
     device.joints.set_position_gains(policy.P)
     device.joints.set_velocity_gains(policy.D)
-    device.joints.set_desired_positions(policy.pTarget12)
+    device.joints.set_desired_positions(policy.q_init)
     device.joints.set_desired_velocities(np.zeros((12,)))
     device.joints.set_torques(np.zeros((12,)))
+
+    decimation = int(params.control_dt/params.dt)
  
-    for j in range(int(params.control_dt/params.dt)):
+    for j in range(decimation):
         device.send_command_and_wait_end_of_cycle(params.dt)
         device.parse_sensor_data()
 
     #import pudb; pudb.set_trace()
     # RL LOOP ***************************************************
     k = 0
-    while (not device.is_timeout and k < params.max_steps/10):
+    while (not device.is_timeout and k < params.max_steps/decimation):
 
         # Update sensor data (IMU, encoders, Motion capture)
         policy.update_observation(device.joints.positions.reshape((-1, 1)),
@@ -106,7 +107,7 @@ def control_loop():
         device.joints.set_torques(np.zeros((12,)))
 
         # Send command to the robot
-        for j in range(int(params.control_dt/params.dt)):
+        for j in range(decimation):
             if params.USE_JOYSTICK:
                 joy.update_v_ref(k*10 + j + 1, 0)
             device.parse_sensor_data()

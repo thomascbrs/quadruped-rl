@@ -33,7 +33,7 @@ class RLParams():
 
         # Control parameters
         self.dt = 0.001   
-        self.control_dt = 0.01
+        self.control_dt = 0.020
         self.Kp = np.array([3.0, 3.0, 3.0]*4)  # Proportional gains for the PD+
         self.Kd = np.array([0.2, 0.2, 0.2]*4)  # Derivative gains for the PD+
         self.Kff = 0.0  # Feedforward torques multiplier for the PD+
