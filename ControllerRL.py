@@ -21,8 +21,14 @@ class ControllerRL():
 
         # Observation
         self.obs = np.zeros(self._Nobs)
+        self.obs_torch = torch.zeros(1, self._Nobs)
         self.act = np.zeros(self._Nact)
         self.vel_command = np.array([0.,0.,0.])
+        self.joints_pos = np.zeros(self._Nact)
+        self.joints_vel = np.zeros(self._Nact)
+
+        self.projected_gravity = np.zeros(3)
+        self.base_ang_vel = np.zeros(3)
 
         # Scales 
         self.scale_actions = 0.3
@@ -41,6 +47,7 @@ class ControllerRL():
 
         # Initial joint position
         self.q_init = q_init
+        self.q_des = q_init
 
         # timings
         self._t0 = 0
@@ -49,36 +56,37 @@ class ControllerRL():
         self._t3 = 0
         
     def forward(self):
-        
+          
         self._t2 = clock()
-
-        obs = torch.from_numpy(self.obs).float().unsqueeze(0)            
-        self.act = self.model(obs).detach().numpy().squeeze()       
-        self.act = np.clip(self.act, -self.clip_actions, self.clip_actions)
+       
+        
+        self.act[:] = self.model(self.obs_torch).detach()[0]
+        self.act[:] = np.clip(self.act, -self.clip_actions, self.clip_actions)
         
         self._t3 = clock()
 
-        self.q_des = self.act * self.scale_actions + self.q_init
+        self.q_des[:] = self.act * self.scale_actions + self.q_init
         return self.q_des# self.q_init
     
     def update_observation(self, joints_pos, joints_vel, imu_ori, imu_gyro):
         self._t0 = clock()
 
-        self.joints_pos = joints_pos
-        self.joints_vel = joints_vel
+        self.joints_pos[:] = joints_pos[:,0]
+        self.joints_vel[:] = joints_vel[:,0]
 
-        self.projected_gravity = imu_ori.flatten()
-        self.base_ang_vel = imu_gyro.flatten()
+        self.projected_gravity[:] = imu_ori.flatten()
+        self.base_ang_vel[:] = imu_gyro.flatten()
         
-        self.obs = np.hstack([np.zeros(3),
+        self.obs[:] = np.hstack([np.zeros(3),
                                   self.base_ang_vel * self.scale_ang_vel,
                                   self.projected_gravity,
                                   self.vel_command * self.scale_cmd,
-                                  (joints_pos.flatten() - self.q_init) * self.scale_dof_pos,
-                                  joints_vel.flatten() * self.scale_dof_vel,
+                                  (self.joints_pos - self.q_init) * self.scale_dof_pos,
+                                  self.joints_vel * self.scale_dof_vel,
                                   self.act,
                                   -1.5 * np.ones(187)])
-        self.obs = np.clip(self.obs, -self.clip_observations, self.clip_observations)
+        self.obs[:] = np.clip(self.obs, -self.clip_observations, self.clip_observations)
+        self.obs_torch[:] = torch.from_numpy(self.obs)
 
         self._t1 = clock()
 

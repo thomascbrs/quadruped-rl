@@ -89,7 +89,7 @@ def initialize(params, q_init, tau_init, N):
     # Initiate communication with the device and calibrate encoders
     if params.SIMULATION:
         device.Init(calibrateEncoders=True, q_init=q_init, envID=0,
-                    use_flat_plane=True, enable_pyb_GUI=True, dt=params.dt, alpha=params.alpha)
+                    use_flat_plane=True, enable_pyb_GUI=False, dt=params.dt, alpha=params.alpha)
     else:
         # Initialize the communication and the session.
         device.initialize(q_init[:])

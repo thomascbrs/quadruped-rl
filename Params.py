@@ -25,7 +25,7 @@ class RLParams():
         # Replay parameters
         self.SIMULATION = True  # Run the replay in simulation if True
         self.LOGGING = False # Save the logs of the experiments if True
-        self.PLOTTING = True # Save the logs of the experiments if True
+        self.PLOTTING = False # Save the logs of the experiments if True
         self.max_steps = 8000
 
         self.USE_JOYSTICK = False  # Control the robot with a joystick

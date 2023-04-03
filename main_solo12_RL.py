@@ -97,12 +97,12 @@ def control_loop():
                                   device.imu.attitude_euler.reshape((-1, 1)),
                                   device.imu.gyroscope.reshape((-1, 1)))
 
-        q_des = policy.forward()
+        policy.forward()
 
         # Set desired quantities for the actuators
         device.joints.set_position_gains(policy.P)
         device.joints.set_velocity_gains(policy.D)
-        device.joints.set_desired_positions(q_des)
+        device.joints.set_desired_positions(policy.q_des)
         device.joints.set_desired_velocities(np.zeros((12,)))
         device.joints.set_torques(np.zeros((12,)))
 
@@ -113,7 +113,7 @@ def control_loop():
             device.parse_sensor_data()
             device.send_command_and_wait_end_of_cycle(params.dt)
             if params.LOGGING or params.PLOTTING:
-                mini_logger.sample(device, policy, q_des, policy.get_observation(),
+                mini_logger.sample(device, policy, policy.q_des, policy.get_observation(),
                                    policy.get_computation_time(), qc)
 
         # Increment counter
@@ -165,14 +165,21 @@ def control_loop():
     return 0
 
 
+
 def main():
     """
     Main function
     """
 
-    if not params.SIMULATION:  # When running on the real robot
+    if True or  not params.SIMULATION:  # When running on the real robot
         os.nice(-20)  #  Set the process to highest priority (from -20 highest to +20 lowest)
-    control_loop()
+
+    import cProfile
+    import time
+
+    profiler = cProfile.Profile()
+    profiler.run("control_loop()")
+    profiler.print_stats("calls")
     quit()
 
 
