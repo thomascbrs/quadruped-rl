@@ -25,7 +25,7 @@ def put_on_the_floor(device, params, q_init, tau_init):
 
     print("PUT ON THE FLOOR.")
 
-    Kp_pos = 3.
+    Kp_pos = 5.
     Kd_pos = 0.3
 
     device.joints.set_position_gains(Kp_pos * np.ones(12))
@@ -70,7 +70,7 @@ def initialize(params, q_init, tau_init, N):
         from PyBulletSimulator import PyBulletSimulator
     else:
         import libodri_control_interface_pywrap as oci
-        from qualisysClient import QualisysClient
+        # from qualisysClient import QualisysClient
 
     # Create the robot wrapper to communicate with it
     if params.SIMULATION:
@@ -78,7 +78,8 @@ def initialize(params, q_init, tau_init, N):
         qc = None
     else:
         device = oci.robot_from_yaml_file(params.config_file)
-        qc = QualisysClient(ip="140.93.16.160", body_id=0)
+        # qc = QualisysClient(ip="140.93.16.160", body_id=0)
+        qc = None
 
     # If we want to log or plot, create logger
     if params.LOGGING or params.PLOTTING:
@@ -89,7 +90,7 @@ def initialize(params, q_init, tau_init, N):
     # Initiate communication with the device and calibrate encoders
     if params.SIMULATION:
         device.Init(calibrateEncoders=True, q_init=q_init, envID=0,
-                    use_flat_plane=True, enable_pyb_GUI=False, dt=params.dt, alpha=params.alpha)
+                    use_flat_plane=True, enable_pyb_GUI=True, dt=params.dt, alpha=params.alpha)
     else:
         # Initialize the communication and the session.
         device.initialize(q_init[:])

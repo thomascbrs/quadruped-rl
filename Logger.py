@@ -5,7 +5,7 @@ from time import time
 import pinocchio as pin
 
 class Logger():
-    def __init__(self, device=None, qualisys=None, logSize=60e3):
+    def __init__(self, device=None, qualisys=None, logSize=60e3, SIMULATION=False):
         logSize = int(logSize)
         self.logSize = logSize
         nb_motors = 12
@@ -45,6 +45,9 @@ class Logger():
         # Timestamps
         self.tstamps = np.zeros(logSize)
 
+        # Simulation
+        self.SIMULATION = SIMULATION
+
     def sample(self, device, policy, qdes, obs, ctime, qualisys=None):
 
         # Logging from the device (data coming from the robot)
@@ -59,9 +62,9 @@ class Logger():
         self.baseLinearAcceleration[self.k] = device.imu.linear_acceleration
         self.baseAccelerometer[self.k] = device.imu.accelerometer
         self.torquesFromCurrentMeasurment[self.k] = device.joints.measured_torques
-        self.current[self.k] = device.powerboard.current
-        self.voltage[self.k] = device.powerboard.voltage
-        self.energy[self.k] = device.powerboard.energy
+        # self.current[self.k] = device.powerboard.current
+        # self.voltage[self.k] = device.powerboard.voltage
+        # self.energy[self.k] = device.powerboard.energy
 
         # Logging observation of neural network
         self.observation[self.k] = obs
@@ -74,12 +77,14 @@ class Logger():
             self.mocapAngularVelocity[self.k] = qualisys.getAngularVelocity()
             self.mocapOrientationMat9[self.k] = qualisys.getOrientationMat9()
             self.mocapOrientationQuat[self.k] = qualisys.getOrientationQuat()
-        else:  # Logging from PyBullet simulator through fake device
+        elif self.SIMULATION:  # Logging from PyBullet simulator through fake device
             self.mocapPosition[self.k] = device.baseState[0]
             self.mocapVelocity[self.k] = device.baseVel[0]
             self.mocapAngularVelocity[self.k] = device.baseVel[1]
             self.mocapOrientationMat9[self.k] = device.rot_oMb
             self.mocapOrientationQuat[self.k] = device.baseState[1]
+        else:
+            pass
 
         # Logging timestamp
         self.tstamps[self.k] = time()
@@ -248,31 +253,31 @@ class Logger():
         # Power supply profile
         ####
         
-        plt.figure()
-        for i in range(4):
-            if i == 0:
-                ax0 = plt.subplot(4, 1, i+1)
-            else:
-                plt.subplot(4, 1, i+1, sharex=ax0)
+        # plt.figure()
+        # for i in range(4):
+        #     if i == 0:
+        #         ax0 = plt.subplot(4, 1, i+1)
+        #     else:
+        #         plt.subplot(4, 1, i+1, sharex=ax0)
 
-            if i == 0:
-                plt.plot(t_range, self.current[:], linewidth=2)
-                plt.ylabel("Bus current [A]")
-            elif i == 1:
-                plt.plot(t_range, self.voltage[:], linewidth=2)
-                plt.ylabel("Bus voltage [V]")
-            elif i == 2:
-                plt.plot(t_range, self.energy[:], linewidth=2)
-                plt.ylabel("Bus energy [J]")
-            else:
-                power = self.current[:] * self.voltage[:]
-                plt.plot(t_range, power, linewidth=2)
-                N = 10
-                plt.plot(t_range[(N-1):], np.convolve(power, np.ones(N)/N, mode='valid'), linewidth=2)
-                plt.legend(["Raw", "Averaged 10 ms"])
-                plt.ylabel("Bus power [W]")
-                plt.xlabel("Time [s]")
-        self.custom_suptitle("Energy profiles")
+        #     if i == 0:
+        #         plt.plot(t_range, self.current[:], linewidth=2)
+        #         plt.ylabel("Bus current [A]")
+        #     elif i == 1:
+        #         plt.plot(t_range, self.voltage[:], linewidth=2)
+        #         plt.ylabel("Bus voltage [V]")
+        #     elif i == 2:
+        #         plt.plot(t_range, self.energy[:], linewidth=2)
+        #         plt.ylabel("Bus energy [J]")
+        #     else:
+        #         power = self.current[:] * self.voltage[:]
+        #         plt.plot(t_range, power, linewidth=2)
+        #         N = 10
+        #         plt.plot(t_range[(N-1):], np.convolve(power, np.ones(N)/N, mode='valid'), linewidth=2)
+        #         plt.legend(["Raw", "Averaged 10 ms"])
+        #         plt.ylabel("Bus power [W]")
+        #         plt.xlabel("Time [s]")
+        # self.custom_suptitle("Energy profiles")
 
         ####
         # Measured & Reference position and orientation (ideal world frame)
@@ -288,8 +293,9 @@ class Logger():
             if i < 3:
                 plt.plot(t_range, self.mocap_pos[:, i], "k", linewidth=3)
             else:
-                plt.plot(t_range, self.mocap_RPY[:, i-3], "k", linewidth=3)
-            plt.legend(["Motion capture"], prop={'size': 8})
+                plt.plot(t_range, self.baseOrientation[:, i-3], "b", linewidth=3)
+                # plt.plot(t_range, self.mocap_RPY[:, i-3], "k", linewidth=3)
+            plt.legend(["Observation"], prop={'size': 8})
             plt.ylabel(lgd[i])
         self.custom_suptitle("Position and orientation")
 
@@ -312,10 +318,11 @@ class Logger():
                     plt.plot(t_range, self.observation[:, 9 + i], "b", linewidth=3)
                 plt.legend(["Observation", "Motion capture", "Reference"], prop={'size': 8})
             else:
-                plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
+                # plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
+                plt.plot(t_range, self.baseAngularVelocity[:, i-3], "k", linewidth=3)
                 if i == 5:
                     plt.plot(t_range, self.observation[:, 11], "b", linewidth=3)
-                plt.legend(["Motion capture", "Reference"], prop={'size': 8})
+                plt.legend(["Observation", "Reference"], prop={'size': 8})
             plt.ylabel(lgd[i])
         self.custom_suptitle("Linear and angular velocities")
 

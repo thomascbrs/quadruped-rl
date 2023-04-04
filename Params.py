@@ -23,13 +23,13 @@ class Params():
 class RLParams():
     def __init__(self):
         # Replay parameters
-        self.SIMULATION = True  # Run the replay in simulation if True
-        self.LOGGING = False # Save the logs of the experiments if True
-        self.PLOTTING = False # Save the logs of the experiments if True
-        self.max_steps = 8000
+        self.SIMULATION = False  # Run the replay in simulation if True
+        self.LOGGING = True # Save the logs of the experiments if True
+        self.PLOTTING = True # Save the logs of the experiments if True
+        self.max_steps = 40000
 
-        self.USE_JOYSTICK = False  # Control the robot with a joystick
-        self.USE_PREDEFINED = True  # Use a predefined velocity profile
+        self.USE_JOYSTICK = True  # Control the robot with a joystick
+        self.USE_PREDEFINED = False  # Use a predefined velocity profile
 
         # Control parameters
         self.dt = 0.001   
@@ -48,7 +48,7 @@ class RLParams():
             self.q_init = np.array([-0.04, 0.8, -1.6, 0.04, 0.8, -1.6, \
                                     -0.04, -0.8, 1.6, 0.04, -0.8, 1.6])
            
-        self.alpha = 0.#3569
+        self.alpha = 0.3569
 
         # Other parameters
         self.config_file = "config_solo12.yaml"  #  Name of the yaml file containing hardware information

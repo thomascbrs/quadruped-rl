@@ -8,8 +8,8 @@ import time
 import pinocchio as pin
 
 #from cpuMLP import PolicyMLP3, StateEstMLP2
-from numpy_mlp import MLP2
-from cpuMLP import Interface
+# from numpy_mlp import MLP2
+# from cpuMLP import Interface
 from ControllerRL import ControllerRL
 
 from Joystick import Joystick
@@ -33,6 +33,12 @@ def control_loop():
                 0., 0.9 , -1.64 ])
     params.q_init = q_init
     policy = ControllerRL("tmp_checkpoints/policy_1.pt", q_init)
+
+    policy.update_observation(np.zeros((12,1)),
+                                  np.zeros((12,1)),
+                                  np.zeros((4,1)),
+                                  np.zeros((3,1)))
+    policy.forward()
     #p_tlicy = RLController(weight_path='./tmp_checkpoints/sym_pose/policy-07-05-23-16-12/full_2000.npy', use_state_est= True)
 
     #policies trained with 3vel + energy penalty
@@ -61,30 +67,27 @@ def control_loop():
 
     if params.LOGGING or params.PLOTTING:
         from Logger import Logger
-        mini_logger = Logger(logSize=int(params.max_steps))
+        mini_logger = Logger(logSize=int(params.max_steps), SIMULATION=params.SIMULATION)
 
     # INITIALIZATION ***************************************************
     device, logger, qc = initialize(params, params.q_init, np.zeros((12,)), 100000)
 
 
-    # Init Histories **********************************************
-    device.parse_sensor_data()
-    policy.update_observation(device.joints.positions.reshape((-1, 1)),
-                              device.joints.velocities.reshape((-1, 1)),
-                              device.imu.attitude_euler.reshape((-1, 1)),
-                              device.imu.gyroscope.reshape((-1, 1)))
 
-    device.joints.set_position_gains(policy.P)
-    device.joints.set_velocity_gains(policy.D)
-    device.joints.set_desired_positions(policy.q_init)
-    device.joints.set_desired_velocities(np.zeros((12,)))
-    device.joints.set_torques(np.zeros((12,)))
+    # Init Histories **********************************************
+    # device.parse_sensor_data()
+
+    # device.joints.set_position_gains(policy.P)
+    # device.joints.set_velocity_gains(policy.D)
+    # device.joints.set_desired_positions(policy.q_des)
+    # device.joints.set_desired_velocities(np.zeros((12,)))
+    # device.joints.set_torques(np.zeros((12,)))
 
     decimation = int(params.control_dt/params.dt)
  
-    for j in range(decimation):
-        device.send_command_and_wait_end_of_cycle(params.dt)
-        device.parse_sensor_data()
+    # for j in range(decimation):
+    #     device.send_command_and_wait_end_of_cycle(params.dt)
+    #     device.parse_sensor_data()
 
     #import pudb; pudb.set_trace()
     # RL LOOP ***************************************************
@@ -94,7 +97,7 @@ def control_loop():
         # Update sensor data (IMU, encoders, Motion capture)
         policy.update_observation(device.joints.positions.reshape((-1, 1)),
                                   device.joints.velocities.reshape((-1, 1)),
-                                  device.imu.attitude_euler.reshape((-1, 1)),
+                                  device.imu.attitude_quaternion.reshape((-1, 1)),
                                   device.imu.gyroscope.reshape((-1, 1)))
 
         policy.forward()
@@ -119,6 +122,7 @@ def control_loop():
         # Increment counter
         k += 1
         if params.USE_JOYSTICK:
+            joy.update_v_ref(k, 0)
             vx = joy.v_ref[0,0]
             vx = 0 if abs(vx) < 0.3 else vx
             wz = joy.v_ref[-1,0]
@@ -126,7 +130,7 @@ def control_loop():
             vy = joy.v_ref[1,0] * int(params.enable_lateral_vel)
             vy = 0 if abs(vy) < 0.3 else vy
             policy.vel_command = np.array([vx, vy, wz])
-            #print(vx, wz, joy.v_ref)
+            # print(vx, wz, joy.v_ref)
         elif params.USE_PREDEFINED:
             t_rise = 100  # rising time to max vel
             t_duration = 500  # in number of iterations
@@ -174,12 +178,13 @@ def main():
     if True or  not params.SIMULATION:  # When running on the real robot
         os.nice(-20)  #  Set the process to highest priority (from -20 highest to +20 lowest)
 
-    import cProfile
-    import time
+    # import cProfile
+    # import time
 
-    profiler = cProfile.Profile()
-    profiler.run("control_loop()")
-    profiler.print_stats("calls")
+    # profiler = cProfile.Profile()
+    # profiler.run("control_loop()")
+    # profiler.print_stats("calls")
+    control_loop()
     quit()
 
 
