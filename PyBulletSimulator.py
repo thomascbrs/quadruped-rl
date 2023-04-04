@@ -4,6 +4,7 @@ import pybullet_data
 import time as time
 import sys
 import pinocchio as pin
+from Paths import SOLO_URDF
 
 
 class pybullet_simulator:
@@ -238,7 +239,7 @@ class pybullet_simulator:
         robotStartPos = [0, 0, 0.0]
         robotStartOrientation = pyb.getQuaternionFromEuler([0.0, 0.0, 0.0])  # -np.pi/2
         
-        pyb.setAdditionalSearchPath("/opt/openrobots/share/example-robot-data/robots/solo_description/robots")
+        pyb.setAdditionalSearchPath(SOLO_URDF)
         self.robotId = pyb.loadURDF("solo12.urdf", robotStartPos, robotStartOrientation)
 
         # Disable default motor control for revolute joints
