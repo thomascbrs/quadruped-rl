@@ -10,11 +10,11 @@ class Logger():
         self.logSize = logSize
         nb_motors = 12
         self.k = 0
+        self.device = device
 
         # Allocate the data:
         # IMU and actuators:
         self.q_mes = np.zeros([logSize, nb_motors])
-        self.q_des = np.zeros([logSize, nb_motors])
         self.P = np.zeros([logSize, nb_motors])
         self.D = np.zeros([logSize, nb_motors])
 
@@ -25,22 +25,27 @@ class Logger():
         self.baseAngularVelocity = np.zeros([logSize, 3])
         self.baseLinearAcceleration = np.zeros([logSize, 3])
         self.baseAccelerometer = np.zeros([logSize, 3])
+
         self.current = np.zeros(logSize)
         self.voltage = np.zeros(logSize)
         self.energy = np.zeros(logSize)
+
         self.q_des = np.zeros([logSize, nb_motors])
-        self.v_des = np.zeros([logSize, nb_motors])
+        self.v_des = np.zeros([logSize, 3])
 
         # Observation by neural network
         self.observation = np.zeros([logSize, 235])
         self.computation_time = np.zeros(logSize)
 
         # Motion capture:
+        self.qualisys = qualisys
         self.mocapPosition = np.zeros([logSize, 3])
         self.mocapVelocity = np.zeros([logSize, 3])
         self.mocapAngularVelocity = np.zeros([logSize, 3])
         self.mocapOrientationMat9 = np.zeros([logSize, 3, 3])
         self.mocapOrientationQuat = np.zeros([logSize, 4])
+
+        self.has_powerboard = device is not None and hasattr(device, "powerboard")
 
         # Timestamps
         self.tstamps = np.zeros(logSize)
@@ -48,11 +53,14 @@ class Logger():
         # Simulation
         self.SIMULATION = SIMULATION
 
-    def sample(self, device, policy, qdes, obs, ctime, qualisys=None):
+    def sample(self, policy, qdes, vdes, obs, ctime):
+
+        device = self.device
 
         # Logging from the device (data coming from the robot)
         self.q_mes[self.k] = device.joints.positions
         self.q_des[self.k] = qdes
+        self.v_des[self.k] = vdes
         self.P[self.k] = policy.P
         self.D[self.k] = policy.D
         self.v_mes[self.k] = device.joints.velocities
@@ -62,15 +70,18 @@ class Logger():
         self.baseLinearAcceleration[self.k] = device.imu.linear_acceleration
         self.baseAccelerometer[self.k] = device.imu.accelerometer
         self.torquesFromCurrentMeasurment[self.k] = device.joints.measured_torques
-        # self.current[self.k] = device.powerboard.current
-        # self.voltage[self.k] = device.powerboard.voltage
-        # self.energy[self.k] = device.powerboard.energy
+
+        if self.has_powerboard:
+            self.current[self.k] = device.powerboard.current
+            self.voltage[self.k] = device.powerboard.voltage
+            self.energy[self.k] = device.powerboard.energy
 
         # Logging observation of neural network
         self.observation[self.k] = obs
         self.computation_time[self.k] = ctime
 
         # Logging from qualisys (motion -- End of script --capture)
+        qualisys = self.qualisys
         if qualisys is not None:
             self.mocapPosition[self.k] = qualisys.getPosition()
             self.mocapVelocity[self.k] = qualisys.getVelocity()
@@ -83,8 +94,6 @@ class Logger():
             self.mocapAngularVelocity[self.k] = device.baseVel[1]
             self.mocapOrientationMat9[self.k] = device.rot_oMb
             self.mocapOrientationQuat[self.k] = device.baseState[1]
-        else:
-            pass
 
         # Logging timestamp
         self.tstamps[self.k] = time()
@@ -100,6 +109,7 @@ class Logger():
                             P=self.P,
                             D=self.D,
                             v_mes=self.v_mes,
+                            v_des=self.v_des,
                             baseOrientation=self.baseOrientation,
                             baseOrientationQuat=self.baseOrientationQuat,
                             baseAngularVelocity=self.baseAngularVelocity,
@@ -127,6 +137,7 @@ class Logger():
         self.P = data["P"]
         self.D = data["D"]
         self.v_mes = data["v_mes"]
+        self.v_des = data["v_des"] if "v_des" in data else self.v_des
         self.baseOrientation = data["baseOrientation"]
         self.baseOrientationQuat = data["baseOrientationQuat"]
         self.baseAngularVelocity = data["baseAngularVelocity"]
@@ -175,163 +186,111 @@ class Logger():
         fig.suptitle(name)
         fig.canvas.manager.set_window_title(name)
 
+    def plot(self, title, nrows, ncols, t_range, legends, observations, references=None, mocaps=None, **kwargs):
+        from matplotlib import pyplot as plt
+        plt.figure()
+        for i, obs in enumerate(observations):
+            if i == 0:
+                ax0 = plt.subplot(nrows, ncols, 1)
+            else:
+                plt.subplot(nrows, ncols, ncols * (i % nrows) + (i // nrows) + 1, sharex=ax0)
+           
+            if obs is not None:
+                plt.plot(t_range[:self.k+1], obs[:self.k+1], color='b', linewidth=3, label='Observation', **kwargs)
+            if references is not None and references[i] is not None:
+                plt.plot(t_range[:self.k+1], references[i][:self.k+1], color='r', linewidth=3, label='Reference', **kwargs)
+            if (self.SIMULATION or self.qualisys is not None) and mocaps is not None and mocaps[i] is not None:
+                plt.plot(t_range[:self.k+1], mocaps[i][:self.k+1], color='g', linewidth=3, label='Motion capture', **kwargs)
+
+            plt.xlabel("Time [s]")
+            plt.ylabel(legends(i))
+            plt.legend()
+
+        self.custom_suptitle(title)  
+
+
     def plotAll(self, dt, replay):
         from matplotlib import pyplot as plt
 
-        print(self.logSize)
         t_range = np.array([k*dt for k in range(self.logSize)])
 
         self.processMocap()
 
-        index6 = [1, 3, 5, 2, 4, 6]
-        index12 = [1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12]
+        lgd1 = ["HAA", "HFE", "Knee"]
+        lgd2 = ["FL", "FR", "HL", "HR"]
+        lgd = lambda unit: lambda i: "%s %s [%s]" % (lgd1[i % 3], lgd2[i//3],  unit)
 
         ####
         # Desired & Measured actuator positions
-        ####
-        lgd1 = ["HAA", "HFE", "Knee"]
-        lgd2 = ["FL", "FR", "HL", "HR"]
-        plt.figure()
-        for i in range(12):
-            if i == 0:
-                ax0 = plt.subplot(3, 4, index12[i])
-            else:
-                plt.subplot(3, 4, index12[i], sharex=ax0)
-            h1, = plt.plot(t_range, self.q_des[:, i], color='r', linewidth=3)
-            h2, = plt.plot(t_range, self.q_mes[:, i], color='b', linewidth=3)
-            plt.xlabel("Time [s]")
-            plt.ylabel(lgd1[i % 3]+" "+lgd2[int(i/3)]+" [rad]")
-            plt.legend([h1, h2], ["Ref "+lgd1[i % 3]+" "+lgd2[int(i/3)],
-                                  lgd1[i % 3]+" "+lgd2[int(i/3)]], prop={'size': 8})
-        self.custom_suptitle("Actuator positions")
-
+        ####     
+        self.plot("Actuator positions", 3, 4, t_range, lgd("rad"), self.q_mes.T, self.q_des.T)
+       
         ####
         # Desired & Measured actuator velocity
         ####
-        lgd1 = ["HAA", "HFE", "Knee"]
-        lgd2 = ["FL", "FR", "HL", "HR"]
-        plt.figure()
-        for i in range(12):
-            if i == 0:
-                ax0 = plt.subplot(3, 4, index12[i])
-            else:
-                plt.subplot(3, 4, index12[i], sharex=ax0)
-            #h1, = plt.plot(t_range, replay.v[:, i], color='r', linewidth=3)
-            h2, = plt.plot(t_range, self.v_mes[:, i], color='b', linewidth=3)
-            plt.xlabel("Time [s]")
-            plt.ylabel(lgd1[i % 3]+" "+lgd2[int(i/3)]+" [rad]")
-            #plt.legend([h1, h2], ["Ref "+lgd1[i % 3]+" "+lgd2[int(i/3)],
-            #                      lgd1[i % 3]+" "+lgd2[int(i/3)]], prop={'size': 8})
-        self.custom_suptitle("Actuator velocities")
-
+        self.plot("Actuator velocities", 3, 4, t_range, lgd("rad/s"), self.v_mes.T)
+    
         ####
         # FF torques & FB torques & Sent torques & Meas torques
         ####
-        lgd1 = ["HAA", "HFE", "Knee"]
-        lgd2 = ["FL", "FR", "HL", "HR"]
-        plt.figure()
-        for i in range(12):
-            if i == 0:
-                ax0 = plt.subplot(3, 4, index12[i])
-            else:
-                plt.subplot(3, 4, index12[i], sharex=ax0)
-            """tau_fb = replay.P[:, i] * (replay.q[:, i] - self.q_mes[:, 6]) + \
-                replay.D[:, i] * (replay.v[:, i] - self.v_mes[:, i])
-            h1, = plt.plot(t_range, replay.FF[:, i] * replay.tau[:, i], "r", linewidth=3)
-            h2, = plt.plot(t_range, tau_fb, "b", linewidth=3)
-            h3, = plt.plot(t_range, replay.FF[:, i] * replay.tau[:, i] + tau_fb, "g", linewidth=3)"""
-            h4, = plt.plot(t_range[:-1], self.torquesFromCurrentMeasurment[1:, i],
-                           "violet", linewidth=3, linestyle="--")
-            plt.xlabel("Time [s]")
-            plt.ylabel(lgd1[i % 3]+" "+lgd2[int(i/3)]+" [Nm]")
-            tmp = lgd1[i % 3]+" "+lgd2[int(i/3)]
-            #plt.legend([h1, h2, h3, h4], ["FF "+tmp, "FB "+tmp, "PD+ "+tmp, "Meas "+tmp], prop={'size': 8})
-            plt.ylim([-8.0, 8.0])
-        self.custom_suptitle("Torques")
+        self.plot("Torques", 3, 4, t_range[:-1], lgd("Nm"), self.torquesFromCurrentMeasurment[1:].T)
 
-        ####
-        # Power supply profile
-        ####
-        
-        # plt.figure()
-        # for i in range(4):
-        #     if i == 0:
-        #         ax0 = plt.subplot(4, 1, i+1)
-        #     else:
-        #         plt.subplot(4, 1, i+1, sharex=ax0)
+        if self.has_powerboard:
+            ####
+            # Power supply profile
+            ####
+            plt.figure()
+            for i in range(4):
+                if i == 0:
+                    ax0 = plt.subplot(4, 1, i+1)
+                else:
+                    plt.subplot(4, 1, i+1, sharex=ax0)
 
-        #     if i == 0:
-        #         plt.plot(t_range, self.current[:], linewidth=2)
-        #         plt.ylabel("Bus current [A]")
-        #     elif i == 1:
-        #         plt.plot(t_range, self.voltage[:], linewidth=2)
-        #         plt.ylabel("Bus voltage [V]")
-        #     elif i == 2:
-        #         plt.plot(t_range, self.energy[:], linewidth=2)
-        #         plt.ylabel("Bus energy [J]")
-        #     else:
-        #         power = self.current[:] * self.voltage[:]
-        #         plt.plot(t_range, power, linewidth=2)
-        #         N = 10
-        #         plt.plot(t_range[(N-1):], np.convolve(power, np.ones(N)/N, mode='valid'), linewidth=2)
-        #         plt.legend(["Raw", "Averaged 10 ms"])
-        #         plt.ylabel("Bus power [W]")
-        #         plt.xlabel("Time [s]")
-        # self.custom_suptitle("Energy profiles")
+                if i == 0:
+                    plt.plot(t_range, self.current[:], linewidth=2)
+                    plt.ylabel("Bus current [A]")
+                elif i == 1:
+                    plt.plot(t_range, self.voltage[:], linewidth=2)
+                    plt.ylabel("Bus voltage [V]")
+                elif i == 2:
+                    plt.plot(t_range, self.energy[:], linewidth=2)
+                    plt.ylabel("Bus energy [J]")
+                else:
+                    power = self.current[:] * self.voltage[:]
+                    plt.plot(t_range, power, linewidth=2)
+                    N = 10
+                    plt.plot(t_range[(N-1):], np.convolve(power, np.ones(N)/N, mode='valid'), linewidth=2)
+                    plt.legend(["Raw", "Averaged 10 ms"])
+                    plt.ylabel("Bus power [W]")
+                    plt.xlabel("Time [s]")
+            self.custom_suptitle("Energy profiles")
 
         ####
         # Measured & Reference position and orientation (ideal world frame)
         ####
         lgd = ["Pos X", "Pos Y", "Pos Z", "Roll", "Pitch", "Yaw"]
-        plt.figure()
-        for i in range(6):
-            if i == 0:
-                ax0 = plt.subplot(3, 2, index6[i])
-            else:
-                plt.subplot(3, 2, index6[i], sharex=ax0)
-
-            if i < 3:
-                plt.plot(t_range, self.mocap_pos[:, i], "k", linewidth=3)
-            else:
-                plt.plot(t_range, self.baseOrientation[:, i-3], "b", linewidth=3)
-                # plt.plot(t_range, self.mocap_RPY[:, i-3], "k", linewidth=3)
-            plt.legend(["Observation"], prop={'size': 8})
-            plt.ylabel(lgd[i])
-        self.custom_suptitle("Position and orientation")
+        obs = [None] * 3 + list(self.baseOrientation.T)
+        mocap = list(self.mocap_pos.T) + list(self.mocap_RPY.T)
+        self.plot("Position and orientation", 3, 2, t_range, lambda i: lgd[i], obs, mocaps=mocap)
 
         ####
         # Measured & Reference linear and angular velocities (horizontal frame)
         ####
         lgd = ["Linear vel X", "Linear vel Y", "Linear vel Z",
                "Angular vel Roll", "Angular vel Pitch", "Angular vel Yaw"]
-        plt.figure()
-        for i in range(6):
-            if i == 0:
-                ax0 = plt.subplot(3, 2, index6[i])
-            else:
-                plt.subplot(3, 2, index6[i], sharex=ax0)
+        
+        obs = [None] * 3 + list(self.baseAngularVelocity[:, :3].T)
+        mocaps = list(self.mocap_h_v.T) + list(self.mocap_b_w.T)
+        references = list(self.v_des[:, :2].T) + [None] * 3 + [self.v_des[:, 2]]
 
-            if i < 3:
-                plt.plot(t_range, self.observation[:, 3 + i], "r", linewidth=3)
-                plt.plot(t_range, self.mocap_h_v[:, i], "k", linewidth=3)
-                if i < 2:
-                    plt.plot(t_range, self.observation[:, 9 + i], "b", linewidth=3)
-                plt.legend(["Observation", "Motion capture", "Reference"], prop={'size': 8})
-            else:
-                # plt.plot(t_range, self.mocap_b_w[:, i-3], "k", linewidth=3)
-                plt.plot(t_range, self.baseAngularVelocity[:, i-3], "k", linewidth=3)
-                if i == 5:
-                    plt.plot(t_range, self.observation[:, 11], "b", linewidth=3)
-                plt.legend(["Observation", "Reference"], prop={'size': 8})
-            plt.ylabel(lgd[i])
-        self.custom_suptitle("Linear and angular velocities")
+        self.plot("Position and orientation", 3, 2, t_range, lambda i: lgd[i], obs, references, mocaps)
 
         ####
         # Duration of each loop
         ####
 
         plt.figure()
-        plt.plot(t_range[:-1], np.diff(self.tstamps))
+        plt.plot(t_range[:-1], np.clip(np.diff(self.tstamps), 0, None))
         self.custom_suptitle("Duration of each loop [s]")
 
         ####

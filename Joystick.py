@@ -45,21 +45,9 @@ class Joystick:
         self.joystick_code = 0  # Code to carry information about pressed buttons
 
         self.reset = False
+        self.client_init = False
 
-    def update_v_ref(self, k_loop, velID, is_static=False):
-        """Update the reference velocity of the robot along X, Y and Yaw in local frame by
-        listening to a gamepad handled by an independent thread
-
-        Args:
-            k_loop (int): numero of the current iteration
-            velID (int): Identifier of the current velocity profile to be able to handle different scenarios
-        """
-
-        self.update_v_ref_gamepad(k_loop, is_static)
-
-        return 0
-
-    def update_v_ref_gamepad(self, k_loop, is_static):
+    def update_v_ref(self):
         """Update the reference velocity of the robot along X, Y and Yaw in local frame by
         listening to a gamepad handled by an independent thread
 
@@ -69,23 +57,26 @@ class Joystick:
 
         # Create the gamepad client
         if LAASGAMEPAD:
-            if k_loop == 0:
+            if not self.client_init:                
                 self.gp = gC.GamepadClient()
 
                 self.gp.leftJoystickX.value = 0.00390625
                 self.gp.leftJoystickY.value = 0.00390625
                 self.gp.rightJoystickX.value = 0.00390625
+                self.client_init = True
 
             self.vX = (self.gp.leftJoystickX.value / 0.00390625 - 1 ) * self.VxScale
             self.vY = (self.gp.leftJoystickY.value / 0.00390625 - 1 ) * self.VyScale
             self.vYaw = (self.gp.rightJoystickX.value / 0.00390625 - 1 ) * self.vYawScale
 
         else:
-            if k_loop == 0:
+            if not self.client_init:
                 self.gp = gC.GamepadClient()
                 self.gp.leftJoystickX.value = 0.
                 self.gp.leftJoystickY.value = 0.
                 self.gp.rightJoystickX.value = 0.
+                self.client_init = True
+
             self.vX = self.gp.leftJoystickX.value * self.VxScale
             self.vY = self.gp.leftJoystickY.value * self.VyScale
             self.vYaw = self.gp.rightJoystickX.value * self.vYawScale
@@ -153,7 +144,7 @@ if __name__ == "__main__":
     from matplotlib import pyplot as plt
     from time import time as clock
     joystick = Joystick()
-    joystick.update_v_ref(0, 0)
+    joystick.update_v_ref()
     k = 0
     vx = [0.0] * 1000
     fig = plt.figure()
@@ -167,7 +158,7 @@ if __name__ == "__main__":
     print("Start")
     while True:
         # Update the reference velocity coming from the gamepad
-        joystick.update_v_ref(k, 0)
+        joystick.update_v_ref()
         vx.pop(0)
         vx.append(joystick.v_ref[0, 0])
 

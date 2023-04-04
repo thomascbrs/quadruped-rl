@@ -83,14 +83,14 @@ def initialize(params, q_init, tau_init, N):
 
     # If we want to log or plot, create logger
     if params.LOGGING or params.PLOTTING:
-        logger = Logger(device, qualisys=qc, logSize=N)
+        logger = Logger(device, qualisys=qc, logSize=N, SIMULATION=params.SIMULATION)
     else:
         logger = None
 
     # Initiate communication with the device and calibrate encoders
     if params.SIMULATION:
         device.Init(calibrateEncoders=True, q_init=q_init, envID=0,
-                    use_flat_plane=True, enable_pyb_GUI=True, dt=params.dt, alpha=params.alpha)
+                    use_flat_plane=True, enable_pyb_GUI=params.PYB_GUI, dt=params.dt, alpha=params.alpha)
     else:
         # Initialize the communication and the session.
         device.initialize(q_init[:])
