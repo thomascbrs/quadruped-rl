@@ -22,8 +22,11 @@ class SoloRLDevice:
         self.policy = policy
         self.params = params
         self.run_name = run_name
+        if params.measure_height:
+            x, y = np.meshgrid(params.measure_x, params.measure_y, indexing="ij")
+            self.measure_points = np.stack((x.flatten(), y.flatten()), axis=-1)
         self._pre_init()
-       
+
     def _pre_init(self):
         if not self.params.SIMULATION:
             # this must be called once before connecting to the robot
@@ -51,6 +54,15 @@ class SoloRLDevice:
 
     def init_robot_and_wait_floor(self):
          self.device, self.logger, _qc = initialize(self.params, self.params.q_init, np.zeros((12,)), 100000)
+
+    def height_map(self):
+        if self.params.SIMULATION:
+            heights = self.device.terrain_height(self.measure_points)
+        else:
+            heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
+
+        # TODO this has changed in newer policies
+        return self.device.dummyPos[2] - 0.5 - heights
 
     def damping_and_shutdown(self):     
         device = self.device
@@ -112,7 +124,8 @@ class SoloRLDevice:
         policy.update_observation(device.joints.positions.reshape((-1, 1)),
                                   device.joints.velocities.reshape((-1, 1)),
                                   device.imu.attitude_quaternion.reshape((-1, 1)),
-                                  device.imu.gyroscope.reshape((-1, 1)))
+                                  device.imu.gyroscope.reshape((-1, 1)),
+                                  self.height_map())
         policy.forward()
 
         # Set desired quantities for the actuators
@@ -176,7 +189,7 @@ def main():
                 0., 0.9, -1.64,
                 0., 0.9 , -1.64 ])
     params.q_init = q_init
-    policy = ControllerRL("tmp_checkpoints/policy_1.pt", q_init)
+    policy = ControllerRL("tmp_checkpoints/policy_1.pt", q_init, params.measure_height)
     
     device = SoloRLDevice(policy, params, "solo")
     device.control_loop()

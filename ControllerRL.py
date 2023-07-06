@@ -17,7 +17,7 @@ def quat_rotate_inverse(q, v):
     return a - b + c
 
 class ControllerRL():
-    def __init__(self, filename, q_init):
+    def __init__(self, filename, q_init, measure_height):
         """
         Load a RL policy previously saved using torch.jit.save for cpu.
         Args:
@@ -41,6 +41,10 @@ class ControllerRL():
         self.vel_command = np.array([0.,0.,0.])
         self.joints_pos = np.zeros(self._Nact)
         self.joints_vel = np.zeros(self._Nact)
+        
+        self.measure_height = measure_height
+        if measure_height:
+            self.height_map = np.zeros(self._Nobs - 48)
 
         self.orientation_quat = torch.zeros(1, 4)
         self.projected_gravity = np.zeros(3)
@@ -54,8 +58,11 @@ class ControllerRL():
         self.scale_ang_vel = 0.25
         self.scale_dof_pos = 1.0
         self.scale_dof_vel = 0.05
+        self.scale_height_map = 5
+        
         self.clip_observations = 100.
         self.clip_actions = 100.
+        self.clip_height_map = 1
 
         # Load model
         self.model = torch.jit.load(filename)
@@ -85,7 +92,7 @@ class ControllerRL():
         self.q_des[:] = self.act * self.scale_actions + self.q_init
         return self.q_des# self.q_init
     
-    def update_observation(self, joints_pos, joints_vel, orientation_quat, imu_gyro):
+    def update_observation(self, joints_pos, joints_vel, orientation_quat, imu_gyro, height_map=None):
         self._t0 = clock()
 
         self.joints_pos[:] = joints_pos[:,0]
@@ -98,14 +105,19 @@ class ControllerRL():
         # self.projected_gravity[:] = imu_ori.flatten()
         self.base_ang_vel[:] = imu_gyro.flatten()
         
-        self.obs[:] = np.hstack([np.zeros(3),
+        self.obs[:48] = np.hstack([np.zeros(3),
                                   self.base_ang_vel * self.scale_ang_vel,
                                   self.projected_gravity,
                                   self.vel_command * self.scale_cmd,
                                   (self.joints_pos - self.q_init) * self.scale_dof_pos,
                                   self.joints_vel * self.scale_dof_vel,
-                                  self.act,
-                                  -1.5 * np.ones(187)])
+                                  self.act
+                                  ])
+        
+        if height_map is not None:
+            self.height_map[:] = height_map.clip(-self.clip_height_map, self.clip_height_map)
+            self.obs[48:] = self.height_map * self.scale_height_map
+
         self.obs[:] = np.clip(self.obs, -self.clip_observations, self.clip_observations)
         self.obs_torch[:] = torch.from_numpy(self.obs)
 

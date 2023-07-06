@@ -54,3 +54,11 @@ class RLParams():
         # Other parameters
         self.config_file = "config_solo12.yaml"  #  Name of the yaml file containing hardware information
         self.record_video = False
+        # only used in simulation; can be "plane", "rough" or "custom:/path/to/terrain"
+        self.terrain_type = f"plane"
+        self.custom_sampling_interval = 0.01
+
+        # -- MUST MATCH THE INPUT OF THE POLICY --
+        self.measure_height = True
+        self.measure_x = np.arange(-0.8, 0.81, 0.1)
+        self.measure_y = np.arange(-0.5, 0.51, 0.1)
