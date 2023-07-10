@@ -60,5 +60,5 @@ class RLParams():
 
         # -- MUST MATCH THE INPUT OF THE POLICY --
         self.measure_height = True
-        self.measure_x = np.arange(-0.8, 0.81, 0.1)
-        self.measure_y = np.arange(-0.5, 0.51, 0.1)
+        self.measure_x = np.arange(-0.8, 0.805, 0.05)
+        self.measure_y = np.arange(-0.5, 0.505, 0.05)

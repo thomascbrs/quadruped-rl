@@ -5,7 +5,7 @@ from time import time
 import pinocchio as pin
 
 class Logger():
-    def __init__(self, device=None, qualisys=None, logSize=60e3, SIMULATION=False):
+    def __init__(self, Nobs, device=None, qualisys=None, logSize=60e3, SIMULATION=False):
         logSize = int(logSize)
         self.logSize = logSize
         nb_motors = 12
@@ -34,7 +34,7 @@ class Logger():
         self.v_des = np.zeros([logSize, 3])
 
         # Observation by neural network
-        self.observation = np.zeros([logSize, 235])
+        self.observation = np.zeros([logSize, Nobs])
         self.computation_time = np.zeros(logSize)
 
         # Motion capture:

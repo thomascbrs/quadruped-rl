@@ -693,6 +693,7 @@ class PyBulletSimulator():
         self.robot_interface = RobotInterface()
 
         self.dummyPos = np.zeros(3)
+        self.baseVel = np.zeros(3)
         self.debugPoints = -1
 
         # Measured data

@@ -31,7 +31,7 @@ class ControllerRL():
         # self.D = np.array([0., 0., 0.]*4)
 
         # Size
-        self._Nobs = 235
+        self._Nobs = 741
         self._Nact = 12
 
         # Observation
@@ -48,6 +48,7 @@ class ControllerRL():
 
         self.orientation_quat = torch.zeros(1, 4)
         self.projected_gravity = np.zeros(3)
+        self.base_speed = np.zeros(3)
         self.base_ang_vel = np.zeros(3)
 
         # Scales 
@@ -55,6 +56,7 @@ class ControllerRL():
         self.scale_cmd_lin_vel = 2.0
         self.scale_cmd_ang_vel = 0.25
         self.scale_cmd = np.array([self.scale_cmd_lin_vel,self.scale_cmd_lin_vel,self.scale_cmd_ang_vel])
+        self.scale_lin_vel = 2
         self.scale_ang_vel = 0.25
         self.scale_dof_pos = 1.0
         self.scale_dof_vel = 0.05
@@ -92,7 +94,7 @@ class ControllerRL():
         self.q_des[:] = self.act * self.scale_actions + self.q_init
         return self.q_des# self.q_init
     
-    def update_observation(self, joints_pos, joints_vel, orientation_quat, imu_gyro, height_map=None):
+    def update_observation(self, base_speed, joints_pos, joints_vel, orientation_quat, imu_gyro, height_map=None):
         self._t0 = clock()
 
         self.joints_pos[:] = joints_pos[:,0]
@@ -103,9 +105,10 @@ class ControllerRL():
         self.projected_gravity[:] = quat_rotate_inverse(self.orientation_quat, torch.tensor([[0.0, 0.0, -1.0]]).float())
 
         # self.projected_gravity[:] = imu_ori.flatten()
+        self.base_speed[:] = base_speed.flatten()
         self.base_ang_vel[:] = imu_gyro.flatten()
         
-        self.obs[:48] = np.hstack([np.zeros(3),
+        self.obs[:48] = np.hstack([self.base_speed * self.scale_lin_vel,
                                   self.base_ang_vel * self.scale_ang_vel,
                                   self.projected_gravity,
                                   self.vel_command * self.scale_cmd,

@@ -32,7 +32,8 @@ class SoloRLDevice:
             # this must be called once before connecting to the robot
             # because the first call to PyTorch takes too much time
             # (causes desync with the robot)
-            self.policy.update_observation(np.zeros((12,1)),
+            self.policy.update_observation(np.zeros(3),
+                                np.zeros((12,1)),
                                 np.zeros((12,1)),
                                 np.zeros((4,1)),
                                 np.zeros((3,1)))
@@ -53,7 +54,7 @@ class SoloRLDevice:
         self.k = 0
 
     def init_robot_and_wait_floor(self):
-         self.device, self.logger, _qc = initialize(self.params, self.params.q_init, np.zeros((12,)), 100000)
+         self.device, self.logger, _qc = initialize(self.params, self.policy._Nobs, self.params.q_init, np.zeros((12,)), 100000)
 
     def height_map(self):
         if self.params.SIMULATION:
@@ -61,8 +62,7 @@ class SoloRLDevice:
         else:
             heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
 
-        # TODO this has changed in newer policies
-        return self.device.dummyPos[2] - 0.5 - heights
+        return self.device.dummyPos[2] - 0.215 - heights
 
     def damping_and_shutdown(self):     
         device = self.device
@@ -121,7 +121,10 @@ class SoloRLDevice:
         decimation = self.decimation
         params = self.params
 
-        policy.update_observation(device.joints.positions.reshape((-1, 1)),
+        baseVel = np.array(device.baseVel[0]) if params.SIMULATION else np.zeros(3)
+
+        policy.update_observation(baseVel,
+                                  device.joints.positions.reshape((-1, 1)),
                                   device.joints.velocities.reshape((-1, 1)),
                                   device.imu.attitude_quaternion.reshape((-1, 1)),
                                   device.imu.gyroscope.reshape((-1, 1)),

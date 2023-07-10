@@ -55,7 +55,7 @@ def put_on_the_floor(device, params, q_init, tau_init):
 
     print("Start the motion.")
 
-def initialize(params, q_init, tau_init, N):
+def initialize(params, Nobs, q_init, tau_init, N):
     """
     Initialize the connection with the robot or the simulation
 
@@ -83,7 +83,7 @@ def initialize(params, q_init, tau_init, N):
 
     # If we want to log or plot, create logger
     if params.LOGGING or params.PLOTTING:
-        logger = Logger(device, qualisys=qc, logSize=N, SIMULATION=params.SIMULATION)
+        logger = Logger(Nobs, device, qualisys=qc, logSize=N, SIMULATION=params.SIMULATION)
     else:
         logger = None
 
