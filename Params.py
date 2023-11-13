@@ -26,7 +26,7 @@ class RLParams():
         self.SIMULATION = True  # Run the replay in simulation if True
         self.PYB_GUI = True # Enable PyBullet GUI if simulation is True
         self.LOGGING = False # Save the logs of the experiments if True
-        self.PLOTTING = True # Save the logs of the experiments if True
+        self.PLOTTING = False # Save the logs of the experiments if True
         self.max_steps = 8000
 
         self.USE_JOYSTICK = True  # Control the robot with a joystick
