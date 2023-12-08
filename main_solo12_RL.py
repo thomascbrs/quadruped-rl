@@ -57,11 +57,10 @@ class SoloRLDevice:
          self.device, self.logger, _qc = initialize(self.params, self.policy._Nobs, self.params.q_init, np.zeros((12,)), 100000)
 
     def height_map(self):
-        if self.params.SIMULATION:
+        if not self.params.SIMULATION:
             heights = self.device.terrain_height(self.measure_points)
         else:
             heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
-
         return self.device.dummyPos[2] - 0.215 - heights
 
     def damping_and_shutdown(self):     
@@ -84,11 +83,15 @@ class SoloRLDevice:
         vy = 0 if abs(vy) < 0.3 else vy
         return np.array([vx, vy, wz])
     
+    def parse_file_loc_policy():
+        file_loc_policy = "/home/asus/server_save/DecW1/policy_D8D.pt"
+        return file_loc_policy
+    
     def _predefined_vel_cmd(self):
         t_rise = 100  # rising time to max vel
         t_duration = 500  # in number of iterations
         if self.k < t_rise + t_duration:
-            v_max = 1.0  # in m/s
+            v_max = 0.5 # in m/s
             v_gp = np.min([v_max * (self.k / t_rise), v_max])
         else:
             self.alpha_v_ref = 0.1
@@ -122,7 +125,8 @@ class SoloRLDevice:
         params = self.params
 
         baseVel = np.array(device.baseVel[0]) if params.SIMULATION else np.zeros(3)
-
+        # import IPython
+        # IPython.embed()
         policy.update_observation(baseVel,
                                   device.joints.positions.reshape((-1, 1)),
                                   device.joints.velocities.reshape((-1, 1)),
@@ -130,11 +134,20 @@ class SoloRLDevice:
                                   device.imu.gyroscope.reshape((-1, 1)),
                                   self.height_map())
         policy.forward()
-
+        #policy.forward()
         # Set desired quantities for the actuators
         device.joints.set_position_gains(policy.P)
         device.joints.set_velocity_gains(policy.D)
         device.joints.set_desired_positions(policy.q_des)
+
+        # if self.init_cycles <= 5:
+            
+        #     device.joints.set_desired_positions(policy.q_init)
+        #     self.init_cycles = self.init_cycles +1
+
+        # else:
+        #     device.joints.set_desired_positions(policy.q_des)
+
         device.joints.set_desired_velocities(np.zeros((12,)))
         device.joints.set_torques(np.zeros((12,)))
 
@@ -192,7 +205,7 @@ def main():
                 0., 0.9, -1.64,
                 0., 0.9 , -1.64 ])
     params.q_init = q_init
-    policy = ControllerRL("tmp_checkpoints/policy_2.pt", q_init, params.measure_height)
+    policy = ControllerRL(SoloRLDevice.parse_file_loc_policy(), q_init, params.measure_height)
     
     device = SoloRLDevice(policy, params, "solo")
     device.control_loop()

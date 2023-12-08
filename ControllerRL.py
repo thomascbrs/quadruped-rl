@@ -80,19 +80,25 @@ class ControllerRL():
         self._t2 = 0
         self._t3 = 0
 
+        self.init_cycles = True
+
         
     def forward(self):
           
         self._t2 = clock()
-       
-        
+
         self.act[:] = self.model(self.obs_torch).detach()[0]
         self.act[:] = np.clip(self.act, -self.clip_actions, self.clip_actions)
-        
         self._t3 = clock()
-
         self.q_des[:] = self.act * self.scale_actions + self.q_init
-        return self.q_des# self.q_init
+
+        if self.init_cycles == True:    
+            self.q_des[:] = self.q_init
+            self.init_cycles = False
+        else:
+            pass
+
+        return self.q_des #self.q_init
     
     def update_observation(self, base_speed, joints_pos, joints_vel, orientation_quat, imu_gyro, height_map=None):
         self._t0 = clock()
