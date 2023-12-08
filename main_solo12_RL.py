@@ -59,10 +59,10 @@ class SoloRLDevice:
     def height_map(self):
         if self.params.SIMULATION:
             heights = self.device.terrain_height(self.measure_points)
+            return self.device.dummyPos[2] - 0.215 - heights
         else:
             heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
-
-        return self.device.dummyPos[2] - 0.215 - heights
+            return heights        
 
     def damping_and_shutdown(self):     
         device = self.device
@@ -88,7 +88,7 @@ class SoloRLDevice:
         t_rise = 100  # rising time to max vel
         t_duration = 500  # in number of iterations
         if self.k < t_rise + t_duration:
-            v_max = 1.0  # in m/s
+            v_max = 0.5  # in m/s
             v_gp = np.min([v_max * (self.k / t_rise), v_max])
         else:
             self.alpha_v_ref = 0.1
