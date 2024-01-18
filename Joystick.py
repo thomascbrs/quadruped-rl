@@ -3,7 +3,7 @@
 import numpy as np
 import gamepadClient as gC
 
-LAASGAMEPAD=1
+LAASGAMEPAD=0
 
 class Joystick:
     """Joystick-like controller that outputs the reference velocity in local frame
@@ -29,9 +29,13 @@ class Joystick:
         self.vYaw = 0.
         self.vZ = 0.
         self.VxScale = 0.3
-        self.VyScale = 0.45
+        self.VyScale = 0.45 
         self.vYawScale = 1.
         self.vZScale = 0.3
+        # self.VxScale = 0.15
+        # self.VyScale = 0.225
+        # self.vYawScale = 0.5
+        # self.vZScale = 0.15
     
         self.Vx_ref = 0.0
         self.Vy_ref = 0.0

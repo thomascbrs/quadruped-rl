@@ -20,6 +20,9 @@ class Logger():
 
         self.v_mes = np.zeros([logSize, nb_motors])
         self.torquesFromCurrentMeasurment = np.zeros([logSize, nb_motors])
+        self.torquesRef = np.zeros([logSize, nb_motors])
+        self.torquesP = np.zeros([logSize, nb_motors])
+        self.torquesD = np.zeros([logSize, nb_motors])
         self.baseOrientation = np.zeros([logSize, 3])
         self.baseOrientationQuat = np.zeros([logSize, 4])
         self.baseAngularVelocity = np.zeros([logSize, 3])
@@ -71,6 +74,11 @@ class Logger():
         self.baseAccelerometer[self.k] = device.imu.accelerometer
         self.torquesFromCurrentMeasurment[self.k] = device.joints.measured_torques
 
+        # Logging torques.
+        self.torquesRef[self.k] = self.P[self.k] * (self.q_des[self.k] - self.q_mes[self.k]) - self.D[self.k] * self.v_mes[self.k] 
+        self.torquesP[self.k] = self.P[self.k] * (self.q_des[self.k] - self.q_mes[self.k])
+        self.torquesD[self.k] = - self.D[self.k] * self.v_mes[self.k]
+
         if self.has_powerboard:
             self.current[self.k] = device.powerboard.current
             self.voltage[self.k] = device.powerboard.voltage
@@ -116,6 +124,9 @@ class Logger():
                             baseLinearAcceleration=self.baseLinearAcceleration,
                             baseAccelerometer=self.baseAccelerometer,
                             torquesFromCurrentMeasurment=self.torquesFromCurrentMeasurment,
+                            torquesRef = self.torquesRef,
+                            torquesD = self.torquesD,
+                            torquesP = self.torquesP,
                             current=self.current,
                             voltage=self.voltage,
                             energy=self.energy,
@@ -144,6 +155,9 @@ class Logger():
         self.baseLinearAcceleration = data["baseLinearAcceleration"]
         self.baseAccelerometer = data["baseAccelerometer"]
         self.torquesFromCurrentMeasurment = data["torquesFromCurrentMeasurment"]
+        self.torquesRef = data["torquesRef"]
+        self.torquesP = data["torquesP"]
+        self.torquesD = data["torquesD"]
         self.current = data["current"]
         self.voltage = data["voltage"]
         self.energy = data["energy"]
@@ -206,7 +220,28 @@ class Logger():
             plt.ylabel(legends(i))
             plt.legend()
 
-        self.custom_suptitle(title)  
+        self.custom_suptitle(title)
+
+    def plot_PD(self, title, nrows, ncols, t_range, legends, observations, torquesRef, torquesP, torquesD, **kwargs):
+        from matplotlib import pyplot as plt
+        plt.figure()
+        for i, obs in enumerate(observations):
+            if i == 0:
+                ax0 = plt.subplot(nrows, ncols, 1)
+            else:
+                plt.subplot(nrows, ncols, ncols * (i % nrows) + (i // nrows) + 1, sharex=ax0)
+           
+            if obs is not None:
+                plt.plot(t_range[:self.k+1], obs[:self.k+1], color='b', linewidth=3, label='Observation', **kwargs)
+            
+            plt.plot(t_range[:self.k+1], torquesRef[i][:self.k+1], color='r', linewidth=3, label='Ref', **kwargs)
+            plt.plot(t_range[:self.k+1], torquesP[i][:self.k+1], color='g', linewidth=3, label='P', **kwargs)
+            plt.plot(t_range[:self.k+1], torquesD[i][:self.k+1], color='k', linewidth=3, label='D', **kwargs)
+        
+
+            plt.xlabel("Time [s]")
+            plt.ylabel(legends(i))
+            plt.legend() 
 
 
     def plotAll(self, dt, replay):
@@ -234,6 +269,12 @@ class Logger():
         # FF torques & FB torques & Sent torques & Meas torques
         ####
         self.plot("Torques", 3, 4, t_range[:-1], lgd("Nm"), self.torquesFromCurrentMeasurment[1:].T)
+
+        ####
+        # Custom FF torques & FB torques & Sent torques & Meas torques
+        ####
+        self.plot_PD("Torques_PD", 3, 4, t_range[:-1], lgd("Nm"), self.torquesFromCurrentMeasurment[1:].T,self.torquesRef[1:].T,
+                     self.torquesP[1:].T, self.torquesD[1:].T )
 
         if self.has_powerboard:
             ####

@@ -25,12 +25,12 @@ class RLParams():
         self.enable_lateral_vel = True
         self.symmetric_pose = True
 
-        self.q_init = np.array([-0.04, 0.7, -1.4, 0.04, 0.7, -1.4, \
-                                -0.04, 0.7, -1.4, 0.04, 0.7, -1.4])
+        # self.q_init = np.array([-0.04, 0.7, -1.4, 0.04, 0.7, -1.4, \
+        #                         -0.04, 0.7, -1.4, 0.04, 0.7, -1.4])
 
-        if self.symmetric_pose:
-            self.q_init = np.array([-0.04, 0.8, -1.6, 0.04, 0.8, -1.6, \
-                                    -0.04, -0.8, 1.6, 0.04, -0.8, 1.6])
+        # if self.symmetric_pose:
+        #     self.q_init = np.array([-0.04, 0.8, -1.6, 0.04, 0.8, -1.6, \
+        #                             -0.04, -0.8, 1.6, 0.04, -0.8, 1.6])
            
         self.alpha = 0.3569
 

@@ -63,7 +63,7 @@ class ControllerRL():
         self.scale_height_map = 5
         
         self.clip_observations = 100.
-        self.clip_actions = 100.
+        self.clip_actions = 2.
         self.clip_height_map = 1
 
         # Load model
@@ -88,15 +88,19 @@ class ControllerRL():
         self._t2 = clock()
 
         self.act[:] = self.model(self.obs_torch).detach()[0]
-        self.act[:] = np.clip(self.act, -self.clip_actions, self.clip_actions)
+        if self.init_cycles == True:  
+            self.act[:] = np.clip(self.act, -self.clip_actions/2, self.clip_actions/2)
+            self.init_cycles = False
+        else:    
+            self.act[:] = np.clip(self.act, -self.clip_actions, self.clip_actions)
         self._t3 = clock()
         self.q_des[:] = self.act * self.scale_actions + self.q_init
 
-        if self.init_cycles == True:    
-            self.q_des[:] = self.q_init
-            self.init_cycles = False
-        else:
-            pass
+        # if self.init_cycles == True:    
+        #     self.q_des[:] = self.q_init
+        #     self.init_cycles = False
+        # else:
+        #     pass
 
         return self.q_des #self.q_init
     

@@ -4,7 +4,7 @@ import os
 import numpy as np
 from Params import RLParams
 from utils import *
-
+import time
 #from cpuMLP import PolicyMLP3, StateEstMLP2
 # from numpy_mlp import MLP2
 # from cpuMLP import Interface
@@ -84,20 +84,51 @@ class SoloRLDevice:
         return np.array([vx, vy, wz])
     
     def parse_file_loc_policy():
-        file_loc_policy = "/home/asus/server_save/DecW1/policy_D8D.pt"
+        file_loc_policy = "/home/sandor/server_save/jan/policy_SisaacJ18_2.pt"
         return file_loc_policy
     
+    # def _predefined_vel_cmd(self):
+    #     t_rise = 100  # rising time to max vel
+    #     t_duration = 500  # in number of iterations
+    #     if self.k < t_rise + t_duration:
+    #         v_max = 0.3 # in m/s
+    #         v_gp = np.min([v_max * (self.k / t_rise), v_max])
+    #     else:
+    #         self.alpha_v_ref = 0.1
+    #         v_gp = 0.0  # Stop the robot
+    #     self.v_ref = self.alpha_v_ref * v_gp + (1 - self.alpha_v_ref) * self.v_ref  # Low-pass filter
+    #     return np.array([self.v_ref, 0, 0]) 
+
     def _predefined_vel_cmd(self):
-        t_rise = 100  # rising time to max vel
-        t_duration = 500  # in number of iterations
-        if self.k < t_rise + t_duration:
-            v_max = 0.5 # in m/s
-            v_gp = np.min([v_max * (self.k / t_rise), v_max])
+        t_rise = 100  # rising time to max velocity
+        t_vel_duration = 100  # duration of max velocity
+        t_ramp_down_duration = 100  # duration of ramping down
+        t_stop = 200
+        cycle_duration = t_rise + t_vel_duration + t_ramp_down_duration + t_stop # total duration of one cycle (walking + stopping)
+        v_max = 0.4 # in m/s
+        # Restart the cycle after every 'cycle_duration' iterations
+        cycle_iteration = self.k % cycle_duration
+
+        if cycle_iteration < t_rise:
+            # Rising phase
+            v_gp = v_max * (cycle_iteration / t_rise)
+        elif cycle_iteration < t_rise + t_vel_duration:
+            # Constant velocity phase
+            v_gp = v_max
+        elif cycle_iteration < t_rise + t_vel_duration:
+            # Waiting phase before ramping down
+            v_gp = v_max
+        elif cycle_iteration < t_rise + t_vel_duration + t_ramp_down_duration:
+            # Ramping down phase
+            v_gp = v_max * (1 - (cycle_iteration - (t_rise + t_vel_duration)) / t_ramp_down_duration)
         else:
+            # Stopped phase
             self.alpha_v_ref = 0.1
-            v_gp = 0.0  # Stop the robot
-        self.v_ref = self.alpha_v_ref * v_gp + (1 - self.alpha_v_ref) * self.v_ref  # Low-pass filter
-        return np.array([self.v_ref, 0, 0]) 
+            v_gp = 0.0  # Stop the robot
+
+        self.v_ref = self.alpha_v_ref * v_gp + (1 - self.alpha_v_ref) * self.v_ref  # Low-pass filter
+        return np.array([self.v_ref, 0, 0])
+
     
     def _random_cmd(self):
         vx = np.random.uniform(-0.5 , 1.5)
@@ -199,11 +230,17 @@ def main():
     if not params.SIMULATION:  # When running on the real robot
         os.nice(-20)  #  Set the process to highest priority (from -20 highest to +20 lowest)
 
-    q_init = np.array([  0., 0.9, -1.64,
-                0., 0.9, -1.64,
+    # q_init = np.array([  0., 0.9, -1.64,
+    #             0., 0.9, -1.64,
 
-                0., 0.9, -1.64,
-                0., 0.9 , -1.64 ])
+    #             0., -0.9 , 1.64,
+    #             0., -0.9  , 1.64 ])
+        
+    q_init = np.array([
+                0., 0.7, -1.4,
+                0., 0.7, -1.4,
+                0., -0.7 , 1.4,
+                0., -0.7  , 1.4 ])
     params.q_init = q_init
     policy = ControllerRL(SoloRLDevice.parse_file_loc_policy(), q_init, params.measure_height)
     
