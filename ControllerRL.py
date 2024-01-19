@@ -63,7 +63,7 @@ class ControllerRL():
         self.scale_height_map = 5
         
         self.clip_observations = 100.
-        self.clip_actions = 2.
+        self.clip_actions = 8.
         self.clip_height_map = 1
 
         # Load model
@@ -89,7 +89,7 @@ class ControllerRL():
 
         self.act[:] = self.model(self.obs_torch).detach()[0]
         if self.init_cycles == True:  
-            self.act[:] = np.clip(self.act, -self.clip_actions/2, self.clip_actions/2)
+            self.act[:] = np.clip(self.act, -self.clip_actions/4, self.clip_actions/4)
             self.init_cycles = False
         else:    
             self.act[:] = np.clip(self.act, -self.clip_actions, self.clip_actions)

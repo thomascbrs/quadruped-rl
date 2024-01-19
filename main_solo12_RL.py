@@ -56,12 +56,22 @@ class SoloRLDevice:
     def init_robot_and_wait_floor(self):
          self.device, self.logger, _qc = initialize(self.params, self.policy._Nobs, self.params.q_init, np.zeros((12,)), 100000)
 
+    # def height_map(self):
+    #     if not self.params.SIMULATION:
+    #         heights = self.device.terrain_height(self.measure_points)
+    #     else:
+    #         heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
+    #     return self.device.dummyPos[2] - 0.215 - heights
+
     def height_map(self):
-        if not self.params.SIMULATION:
-            heights = self.device.terrain_height(self.measure_points)
-        else:
+        if self.params.SIMULATION:
+            #heights = self.device.terrain_height(self.measure_points)
             heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
-        return self.device.dummyPos[2] - 0.215 - heights
+            return self.device.dummyPos[2] - 0.215 - heights
+        else:
+            heights = np.zeros(self.measure_points.shape[0]) # np.zeros(self.measure_points.shape[0]) # not implemented on real robot
+        return heights #- 0.215 #np.zeros(3)[2] - 0.215 - heights
+        #return self.device.dummyPos[2] - 0.215 - heights
 
     def damping_and_shutdown(self):     
         device = self.device
@@ -84,7 +94,7 @@ class SoloRLDevice:
         return np.array([vx, vy, wz])
     
     def parse_file_loc_policy():
-        file_loc_policy = "/home/sandor/server_save/jan/policy_SisaacJ18_2.pt"
+        file_loc_policy = "/home/sandor/server_save/jan/policy_SisaacJ19.pt"
         return file_loc_policy
     
     # def _predefined_vel_cmd(self):
