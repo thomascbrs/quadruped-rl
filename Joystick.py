@@ -28,7 +28,7 @@ class Joystick:
         self.vY = 0.
         self.vYaw = 0.
         self.vZ = 0.
-        self.VxScale = 0.3
+        self.VxScale = 0.45
         self.VyScale = 0.45 
         self.vYawScale = 1.
         self.vZScale = 0.3
@@ -147,14 +147,20 @@ if __name__ == "__main__":
 
     from matplotlib import pyplot as plt
     from time import time as clock
+
     joystick = Joystick()
     joystick.update_v_ref()
     k = 0
     vx = [0.0] * 1000
+    vy = [0.0] * 1000
+    vyaw = [0.0] * 1000
+
     fig = plt.figure()
     ax = plt.gca()
     ax.set_ylim([-2.5, 2.5])
-    h, = plt.plot(np.linspace(0.001, 1.0, 1000), vx, "b", linewidth=2)
+    h1, = plt.plot(np.linspace(0.001, 1.0, 1000), vx, "b", linewidth=2)  # forwards/backwards
+    h2, = plt.plot(np.linspace(0.001, 1.0, 1000), vy, "r", linewidth=2) # left/right
+    h3, = plt.plot(np.linspace(0.001, 1.0, 1000), vyaw, "g", linewidth=2) # left/right
     plt.xlabel("Time [s]")
     plt.ylabel("Forward reference velocity [m/s]")
     plt.show(block=False)
@@ -165,11 +171,21 @@ if __name__ == "__main__":
         joystick.update_v_ref()
         vx.pop(0)
         vx.append(joystick.v_ref[0, 0])
+        vy.pop(0)
+        vy.append(joystick.v_ref[1, 0])
+        vyaw.pop(0)
+        vyaw.append(joystick.v_ref[5, 0])
 
         if k % 50 == 0:
-            h.set_ydata(vx)
-            print("Joystick raw:      ", joystick.v_gp[0, 0])
-            print("Joystick filtered: ", joystick.v_ref[0, 0])
+            h1.set_ydata(vx)
+            h2.set_ydata(vy)
+            h3.set_ydata(vyaw)
+            print("Joystick raw x:        ", joystick.v_gp[0, 0])
+            print("Joystick filtered x:   ", joystick.v_ref[0, 0])
+            print("Joystick raw y:        ", joystick.v_gp[1, 0])
+            print("Joystick filtered y:   ", joystick.v_ref[1, 0])
+            print("Joystick raw yaw:      ", joystick.v_gp[5, 0])
+            print("Joystick filtered yaw: ", joystick.v_ref[5, 0])
             plt.pause(0.0001)
 
         k += 1
