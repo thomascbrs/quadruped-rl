@@ -94,7 +94,7 @@ class SoloRLDevice:
         return np.array([vx, vy, wz])
     
     def parse_file_loc_policy():
-        file_loc_policy = "/home/sandor/server_save/jan/policy_SisaacJ19.pt"
+        file_loc_policy = "/home/sandor/robots_ws/legged_gym/logs/solo12/exported/policies/policy_ROBUST_ELU_Feb_15-15-44-04.pt"
         return file_loc_policy
     
     # def _predefined_vel_cmd(self):
@@ -115,7 +115,7 @@ class SoloRLDevice:
         t_ramp_down_duration = 100  # duration of ramping down
         t_stop = 200
         cycle_duration = t_rise + t_vel_duration + t_ramp_down_duration + t_stop # total duration of one cycle (walking + stopping)
-        v_max = 0.4 # in m/s
+        v_max = 0.0 # in m/s
         # Restart the cycle after every 'cycle_duration' iterations
         cycle_iteration = self.k % cycle_duration
 
@@ -241,16 +241,16 @@ def main():
         os.nice(-20)  #  Set the process to highest priority (from -20 highest to +20 lowest)
 
     # q_init = np.array([  0., 0.9, -1.64,
-    #             0., 0.9, -1.64,
+    #              0., 0.9, -1.64,
 
-    #             0., -0.9 , 1.64,
-    #             0., -0.9  , 1.64 ])
+    #              0., -0.9 , 1.64,
+    #              0., -0.9  , 1.64 ])
         
     q_init = np.array([
-                0., 0.7, -1.4,
-                0., 0.7, -1.4,
-                0., -0.7 , 1.4,
-                0., -0.7  , 1.4 ])
+                0.3, 0.9, -1.64,
+                -0.3, 0.9, -1.64,
+                0.3, -0.9 , 1.64,
+                -0.3, -0.9  , 1.64 ])
     params.q_init = q_init
     policy = ControllerRL(SoloRLDevice.parse_file_loc_policy(), q_init, params.measure_height)
     

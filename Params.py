@@ -10,10 +10,10 @@ class RLParams():
         self.PYB_GUI = True # Enable PyBullet GUI if simulation is True
         self.LOGGING = False # Save the logs of the experiments if True
         self.PLOTTING = True # Save the logs of the experiments if True
-        self.max_steps = 8000
+        self.max_steps = 12000
 
-        self.USE_JOYSTICK = False  # Control the robot with a joystick
-        self.USE_PREDEFINED = True  # Use a predefined velocity profile
+        self.USE_JOYSTICK = True  # Control the robot with a joystick
+        self.USE_PREDEFINED = False  # Use a predefined velocity profile
 
         # Control parameters
         self.dt = 0.001   
@@ -38,7 +38,7 @@ class RLParams():
         self.config_file = "config_solo12.yaml"  #  Name of the yaml file containing hardware information
         self.record_video = False
         # only used in simulation; can be "plane", "rough" or "custom:/path/to/terrain"
-        self.terrain_type = f"plane"
+        self.terrain_type = f"rough"
         self.custom_sampling_interval = 0.01
 
         # -- MUST MATCH THE INPUT OF THE POLICY --

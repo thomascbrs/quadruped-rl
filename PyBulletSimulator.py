@@ -856,8 +856,8 @@ class PyBulletSimulator():
         # Compute one step of simulation
         pyb.stepSimulation()
 
-        pyb.resetDebugVisualizerCamera(cameraDistance=0.6, 
-                                       cameraYaw=(0.0*self.imu.attitude_euler[2]*(180/3.1415)+45),
+        pyb.resetDebugVisualizerCamera(cameraDistance=0.9, 
+                                       cameraYaw=(0.0*self.imu.attitude_euler[2]*(180/3.1415)-0),
                                        cameraPitch=-39.9,
                                        cameraTargetPosition=[self.baseState[0][0], self.baseState[0][1] + 0.0, 0.0])
 
