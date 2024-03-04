@@ -94,7 +94,8 @@ class SoloRLDevice:
         return np.array([vx, vy, wz])
     
     def parse_file_loc_policy():
-        file_loc_policy = "/home/sandor/robots_ws/legged_gym/logs/solo12/exported/policies/policy_ROBUST_ELU_Feb_15-15-44-04_03-09-164.pt"
+        file_loc_policy = "/home/thomas_cbrs/Desktop/quadruped-rl/tmp_checkpoints/policy_ROBUST_ELU_Feb_15-15-44-04_03-09-164.pt"
+        #file_loc_policy = "/home/thomas_cbrs/Desktop/quadruped-rl/tmp_checkpoints/policy_Feb26.pt"
         return file_loc_policy
     
     # def _predefined_vel_cmd(self):
