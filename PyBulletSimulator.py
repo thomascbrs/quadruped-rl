@@ -102,7 +102,7 @@ class pybullet_simulator:
                 if len(obj) > 0 and obj[0] == "_":
                     continue
 
-                urdf = os.path.join(terrain, obj, obj + ".urdf")
+                urdf = os.path.join(terrain, obj)#, obj + ".urdf")
                 print("Loading terrain object:", urdf, end="")
                 self.terrain_objs[obj] = pyb.loadURDF(urdf)
                 pyb.resetBasePositionAndOrientation(self.terrain_objs[obj], [0, 0, 0.001], [0, 0, 0, 1])                
@@ -434,8 +434,8 @@ class pybullet_simulator:
             self.apply_external_force(k, 2000, 1000, np.array([0.0, +12.0, 0.0]), np.zeros((3,)))"""
 
         # Update the PyBullet camera on the robot position to do as if it was attached to the robot
-        """pyb.resetDebugVisualizerCamera(cameraDistance=0.75, cameraYaw=+50, cameraPitch=-35,
-                                       cameraTargetPosition=[qmes12[0, 0], qmes12[1, 0] + 0.0, 0.0])"""
+        pyb.resetDebugVisualizerCamera(cameraDistance=0.75, cameraYaw=+50, cameraPitch=-35,
+                                       cameraTargetPosition=[qmes12[0, 0], qmes12[1, 0] + 0.0, 0.0])
 
         # Get the orientation of the robot to change the orientation of the camera with the rotation of the robot
         oMb_tmp = pin.SE3(pin.Quaternion(qmes12[3:7]), np.array([0.0, 0.0, 0.0]))
@@ -761,15 +761,18 @@ class PyBulletSimulator():
         points = points.astype(int)
 
         coords = np.ravel_multi_index((points[..., 1], points[..., 0]), self.pyb_sim.sampling_bounds[2:4], mode="clip")
-       
+        #print(coords)
        # UNCOMMENT TO SHOW MEASURED POINTS
-      #  if self.debugPoints >= 0:
-     #       pyb.removeUserDebugItem(self.debugPoints)
-      #  self.debugPoints = pyb.addUserDebugPoints(np.concatenate((_c, self.pyb_sim.height_map[coords][..., None]), axis=-1),
-       #                         np.tile(np.array([[1, 0, 0]]), (187, 1)),
-      #                          pointSize=5,
-       #                         lifeTime=0.1
-       #                         )
+        #self.debugPoints = 1
+        if self.debugPoints >= 0:
+            #print("ASDA")
+            pyb.removeUserDebugItem(self.debugPoints)
+        #print("ASDA2")
+        self.debugPoints = pyb.addUserDebugPoints(np.concatenate((_c, self.pyb_sim.height_map[coords][..., None]), axis=-1),
+                                np.tile(np.array([[0, 0, 1]]), (693, 1)),
+                                pointSize=10,
+                                lifeTime=0.15
+                                )
 
         return self.pyb_sim.height_map[coords]
 
@@ -857,7 +860,7 @@ class PyBulletSimulator():
         pyb.stepSimulation()
 
         pyb.resetDebugVisualizerCamera(cameraDistance=0.9, 
-                                       cameraYaw=(0.0*self.imu.attitude_euler[2]*(180/3.1415)-0),
+                                       cameraYaw=(0.0*self.imu.attitude_euler[2]*(180/3.1415)-90),
                                        cameraPitch=-39.9,
                                        cameraTargetPosition=[self.baseState[0][0], self.baseState[0][1] + 0.0, 0.0])
 
