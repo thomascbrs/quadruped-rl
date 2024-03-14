@@ -763,7 +763,8 @@ class PyBulletSimulator():
             points = (points.squeeze(-1) + self.dummyPos)[..., :2]
 
         _c = points.copy()
-    
+        #print(self.pyb_sim.sampling_bounds)
+        #exit(0)
         points = (points - np.array(self.pyb_sim.sampling_bounds[:2])) / self.pyb_sim.sampling_bounds[4]
         points = points.astype(int)
 
@@ -814,6 +815,7 @@ class PyBulletSimulator():
         self.dummyHeight = np.array(self.baseState[0])
         self.dummyHeight[2] = 0.20
         self.dummyPos = np.array(self.baseState[0])
+
 
         # Linear and angular velocity of the trunk (PyBullet world frame)
         self.baseVel = pyb.getBaseVelocity(self.pyb_sim.robotId)

@@ -14,6 +14,7 @@ from Joystick import Joystick
 import rospy
 from geometry_msgs.msg import TransformStamped
 import tf.transformations
+import matplotlib.pyplot as plt
 
 PROFILER = False
 
@@ -25,28 +26,26 @@ class SoloRLDevice:
         self.policy = policy
         self.params = params
         self.run_name = run_name
+        self.dummyPos = np.zeros(3)
         if params.measure_height:
             x, y = np.meshgrid(params.measure_x, params.measure_y, indexing="ij")
             self.measure_points = np.stack((x.flatten(), y.flatten()), axis=-1)
         self._pre_init()
+        self.listener()
+        #LOAD FROM LAST PYBULLET SAVE
+        self.pyb_global_height_map = np.loadtxt("height_map.txt", delimiter=",")
+        self.pyb_sampling_bounds = np.loadtxt("sampling_bounds.txt", delimiter=",")
+        
+        height_map_reshaped = self.pyb_global_height_map.reshape(387, 387)  # Reshape to 21 rows x 33 columns
 
-        if not params.SIMULATION:
-            rospy.init_node('quaternion_listener', anonymous=True)  # Initialize the ROS node
-            rospy.Subscriber("/vicon_bridge", TransformStamped, self.quaternion_callback)  # Subscribe to the quaternion topic
-            #LOAD FROM LAST PYBULLET SAVE
-            self.pyb_global_height_map = np.loadtxt("height_map.txt", delimiter=",")
-            self.pyb_sampling_bounds = np.loadtxt("sampling_bounds.txt", delimiter=",")
+        # Step 2: Visualize the reshaped data
+        plt.imshow(height_map_reshaped, cmap='viridis', origin='lower', interpolation='none')
+        plt.colorbar(label='Height')
+        plt.title('Height Map Visualization')
+        plt.xlabel('X Coordinate')
+        plt.ylabel('Y Coordinate')
+        plt.show()
 
-    def quaternion_callback(self, msg):
-        # Assuming the quaternion is part of a geometry_msgs/TransformStamped message
-        quaternion = (
-            msg.transform.rotation.x,
-            msg.transform.rotation.y,
-            msg.transform.rotation.z,
-            msg.transform.rotation.w
-        )
-        euler = tf.transformations.euler_from_quaternion(quaternion)  # Convert to Euler angles
-        self.imu.attitude_euler[2] = euler[2]  # Update the yaw angle
 
     def _pre_init(self):
         if not self.params.SIMULATION:
@@ -87,25 +86,20 @@ class SoloRLDevice:
     
     #Trying to implement height map query
     def height_map(self):
-        if self.params.SIMULATION:
+        if not self.params.SIMULATION:
             heights = self.device.terrain_height(self.measure_points)
-            heights_real = self.terrain_height_real_robot(self.measure_points)
+            #heights_real = self.terrain_height_real_robot(self.measure_points)
             #DEBUGGING:
-            height_difference = heights - heights_real
-            print("Height difference: ", height_difference)
-            mean_difference = np.mean(height_difference)
-            std_deviation = np.std(height_difference)
-            max_difference = np.max(np.abs(height_difference))
-            min_difference = np.min(np.abs(height_difference))
+            #height_difference = heights - heights_real
+            #print("Height difference: ", height_difference)
+            height_map_final = self.device.dummyPos[2] - 0.215 - heights
 
-            print(f"Mean difference: {mean_difference}")
-            print(f"Standard Deviation of differences: {std_deviation}")
-            print(f"Max difference: {max_difference}")
-            print(f"Min difference: {min_difference}")
+            #return self.vicon_positions[2] - 0.215 - heights_real
         else:
             #heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
-            heights = self.terrain_height_real_robot(self.measure_points)
-        return self.device.dummyPos[2] - 0.215 - heights
+            heights_real = self.terrain_height_real_robot(self.measure_points)
+            height_map_final = self.vicon_positions[2] - 0.215 - heights_real
+            return height_map_final
 
 
     # def height_map(self):
@@ -129,18 +123,20 @@ class SoloRLDevice:
         Returns:
             a numpy array with the same shape as 'points' (except the last dimension is removed)
         """
+        #euler_attitude = 0
         if robot_frame:
             points = np.concatenate((points, np.zeros_like(points[..., 0:1])), axis=-1)[..., None]
-            points = pin.rpy.rpyToMatrix(np.array([0, 0, self.imu.attitude_euler[2]]))[None] @ points
-            points = (points.squeeze(-1) + self.dummyPos)[..., :2]
+            points = pin.rpy.rpyToMatrix(np.array([0, 0, self.vicon_attitude_euler[2]]))[None] @ points
+            points = (points.squeeze(-1) + self.vicon_positions)[..., :2] #device.dummyPos)[..., :2]
 
         _c = points.copy()
-    
-        points = (points - np.array(self.pyb_sampling_bounds[:2])) / self.pyb_sampling_bounds[4]
+        #print(self.device.pyb_sim.sampling_bounds[:2])
+        #exit(0)
+        points = (points - np.array(self.device.pyb_sim.sampling_bounds[:2])) / self.device.pyb_sim.sampling_bounds[4]
         points = points.astype(int)
 
-        coords = np.ravel_multi_index((points[..., 1], points[..., 0]), self.pyb_sampling_bounds[2:4], mode="clip")
-
+        coords = np.ravel_multi_index((points[..., 1], points[..., 0]), self.device.pyb_sim.sampling_bounds[2:4], mode="clip")
+        
         return self.pyb_global_height_map[coords]
 
     def damping_and_shutdown(self):     
@@ -164,7 +160,7 @@ class SoloRLDevice:
         return np.array([vx, vy, wz])
     
     def parse_file_loc_policy():
-        file_loc_policy = "/home/sandor/robots_ws/quadruped-rl/tmp_checkpoints/policy_March.pt"
+        file_loc_policy = "./tmp_checkpoints/policy_March.pt"
         #file_loc_policy = "/home/thomas_cbrs/Desktop/quadruped-rl/tmp_checkpoints/policy_Feb26.pt"
         return file_loc_policy
     
@@ -302,6 +298,36 @@ class SoloRLDevice:
 
         self.damping_and_shutdown()
 
+    def quaternion_callback(self, msg):
+        # Extract the position (translation)
+        position = np.array([
+        msg.transform.translation.x,
+        msg.transform.translation.y,
+        msg.transform.translation.z
+        ])
+
+        # Assuming the quaternion is part of a geometry_msgs/TransformStamped message
+        quaternion = (
+            msg.transform.rotation.x,
+            msg.transform.rotation.y,
+            msg.transform.rotation.z,
+            msg.transform.rotation.w
+        )
+        # X, Y, Z positions
+        self.vicon_positions = position
+        self.vicon_positions = [0, 0, 0.22]
+        #print(self.vicon_positions)
+        # Update the roll (x), pitch (y), and yaw (z) angles
+        self.vicon_attitude_euler = tf.transformations.euler_from_quaternion(quaternion)  # Convert to Euler angles
+        
+
+    def listener(self):
+        if not self.params.SIMULATION or self.params.SIMULATION:
+            rospy.init_node('quaternion_listener', anonymous=True)  # Initialize the ROS node
+            rospy.Subscriber("/vicon/Solo/Solo", TransformStamped, self.quaternion_callback)  # Subscribe to the quaternion topic
+
+            
+
 def main():
     """
     Main function
@@ -323,13 +349,17 @@ def main():
                 0.3, -0.9 , 1.64,
                 -0.3, -0.9  , 1.64 ])
     params.q_init = q_init
+    
     policy = ControllerRL(SoloRLDevice.parse_file_loc_policy(), q_init, params.measure_height)
     
     device = SoloRLDevice(policy, params, "solo")
+    #rospy.spin()
+    
     device.control_loop()
     device.save_plot_logs()
-
+    
     quit()
+    
 
 if __name__ == "__main__":
     if PROFILER:
@@ -339,6 +369,7 @@ if __name__ == "__main__":
         profiler.enable()
 
     main()
+    rospy.spin()
 
     if PROFILER:
         profiler.disable()
