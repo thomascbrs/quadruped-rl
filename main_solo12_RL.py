@@ -9,8 +9,11 @@ import time
 # from numpy_mlp import MLP2
 # from cpuMLP import Interface
 from ControllerRL import ControllerRL
-
+import pinocchio as pin
 from Joystick import Joystick
+import rospy
+from geometry_msgs.msg import TransformStamped
+import tf.transformations
 
 PROFILER = False
 
@@ -26,6 +29,24 @@ class SoloRLDevice:
             x, y = np.meshgrid(params.measure_x, params.measure_y, indexing="ij")
             self.measure_points = np.stack((x.flatten(), y.flatten()), axis=-1)
         self._pre_init()
+
+        if not params.SIMULATION:
+            rospy.init_node('quaternion_listener', anonymous=True)  # Initialize the ROS node
+            rospy.Subscriber("/vicon_bridge", TransformStamped, self.quaternion_callback)  # Subscribe to the quaternion topic
+            #LOAD FROM LAST PYBULLET SAVE
+            self.pyb_global_height_map = np.loadtxt("height_map.txt", delimiter=",")
+            self.pyb_sampling_bounds = np.loadtxt("sampling_bounds.txt", delimiter=",")
+
+    def quaternion_callback(self, msg):
+        # Assuming the quaternion is part of a geometry_msgs/TransformStamped message
+        quaternion = (
+            msg.transform.rotation.x,
+            msg.transform.rotation.y,
+            msg.transform.rotation.z,
+            msg.transform.rotation.w
+        )
+        euler = tf.transformations.euler_from_quaternion(quaternion)  # Convert to Euler angles
+        self.imu.attitude_euler[2] = euler[2]  # Update the yaw angle
 
     def _pre_init(self):
         if not self.params.SIMULATION:
@@ -56,12 +77,36 @@ class SoloRLDevice:
     def init_robot_and_wait_floor(self):
          self.device, self.logger, _qc = initialize(self.params, self.policy._Nobs, self.params.q_init, np.zeros((12,)), 100000)
 
+    #OG WORKING FUNCTION
+    # def height_map(self):
+    #     if self.params.SIMULATION:
+    #         heights = self.device.terrain_height(self.measure_points)
+    #     else:
+    #         heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
+    #     return self.device.dummyPos[2] - 0.215 - heights
+    
+    #Trying to implement height map query
     def height_map(self):
         if self.params.SIMULATION:
             heights = self.device.terrain_height(self.measure_points)
+            heights_real = self.terrain_height_real_robot(self.measure_points)
+            #DEBUGGING:
+            height_difference = heights - heights_real
+            print("Height difference: ", height_difference)
+            mean_difference = np.mean(height_difference)
+            std_deviation = np.std(height_difference)
+            max_difference = np.max(np.abs(height_difference))
+            min_difference = np.min(np.abs(height_difference))
+
+            print(f"Mean difference: {mean_difference}")
+            print(f"Standard Deviation of differences: {std_deviation}")
+            print(f"Max difference: {max_difference}")
+            print(f"Min difference: {min_difference}")
         else:
-            heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
+            #heights = np.zeros(self.measure_points.shape[0]) # not implemented on real robot
+            heights = self.terrain_height_real_robot(self.measure_points)
         return self.device.dummyPos[2] - 0.215 - heights
+
 
     # def height_map(self):
     #     if self.params.SIMULATION:
@@ -72,6 +117,31 @@ class SoloRLDevice:
     #         heights = np.zeros(self.measure_points.shape[0]) # np.zeros(self.measure_points.shape[0]) # not implemented on real robot
     #     return heights #- 0.215 #np.zeros(3)[2] - 0.215 - heights
     #     #return self.device.dummyPos[2] - 0.215 - heights
+
+    def terrain_height_real_robot(self, points, robot_frame=True):
+        """Returns the terrain's sampled height at the specified location(s).
+        
+        points (numpy array of shape [..., 2]): an array of 2D coordinates, either in
+                                                the robot's frame or the world frame,
+                                                depending on the value of parameter robot_frame
+        robot_frame (bool): whether the coordinates are expressed in the robot's frame
+
+        Returns:
+            a numpy array with the same shape as 'points' (except the last dimension is removed)
+        """
+        if robot_frame:
+            points = np.concatenate((points, np.zeros_like(points[..., 0:1])), axis=-1)[..., None]
+            points = pin.rpy.rpyToMatrix(np.array([0, 0, self.imu.attitude_euler[2]]))[None] @ points
+            points = (points.squeeze(-1) + self.dummyPos)[..., :2]
+
+        _c = points.copy()
+    
+        points = (points - np.array(self.pyb_sampling_bounds[:2])) / self.pyb_sampling_bounds[4]
+        points = points.astype(int)
+
+        coords = np.ravel_multi_index((points[..., 1], points[..., 0]), self.pyb_sampling_bounds[2:4], mode="clip")
+
+        return self.pyb_global_height_map[coords]
 
     def damping_and_shutdown(self):     
         device = self.device
@@ -94,7 +164,7 @@ class SoloRLDevice:
         return np.array([vx, vy, wz])
     
     def parse_file_loc_policy():
-        file_loc_policy = "/home/thomas_cbrs/Desktop/quadruped-rl/tmp_checkpoints/policy_March.pt"
+        file_loc_policy = "/home/sandor/robots_ws/quadruped-rl/tmp_checkpoints/policy_March.pt"
         #file_loc_policy = "/home/thomas_cbrs/Desktop/quadruped-rl/tmp_checkpoints/policy_Feb26.pt"
         return file_loc_policy
     

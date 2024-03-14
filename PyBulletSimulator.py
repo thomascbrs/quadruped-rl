@@ -135,9 +135,14 @@ class pybullet_simulator:
              
             self.sampling_bounds = [minx, miny, *self.height_map.shape[0:2], sampling_interval]
             self.height_map = self.height_map.flatten()
-
             print(" DONE")
             
+            np.savetxt("height_map.txt", self.height_map, delimiter=",")
+            np.savetxt("sampling_bounds.txt", self.sampling_bounds, delimiter=",")
+            print(f"Height map saved to {os.path.abspath('height_map.txt')}")
+            print(f"Sampling bounds saved to {os.path.abspath('sampling_bounds.txt')}")
+            #print(f"Sampling bounds: {self.sampling_bounds}")
+
         if envID == 1:
 
             # Add stairs with platform and bridge
@@ -750,6 +755,8 @@ class PyBulletSimulator():
         Returns:
             a numpy array with the same shape as 'points' (except the last dimension is removed)
         """
+        #from datetime import datetime
+        #start = datetime.now()
         if robot_frame:
             points = np.concatenate((points, np.zeros_like(points[..., 0:1])), axis=-1)[..., None]
             points = pin.rpy.rpyToMatrix(np.array([0, 0, self.imu.attitude_euler[2]]))[None] @ points
@@ -764,6 +771,7 @@ class PyBulletSimulator():
         #print(coords)
        # UNCOMMENT TO SHOW MEASURED POINTS
         #self.debugPoints = 1
+        #end = datetime.now()
         if self.debugPoints >= 0:
             #print("ASDA")
             pyb.removeUserDebugItem(self.debugPoints)
@@ -773,7 +781,9 @@ class PyBulletSimulator():
                                 pointSize=10,
                                 lifeTime=0.15
                                 )
-
+        
+        #td = (end - start).total_seconds() * 10**3
+        #print(f"The time of execution of above program is : {td:.03f}ms")
         return self.pyb_sim.height_map[coords]
 
     def cross3(self, left, right):
